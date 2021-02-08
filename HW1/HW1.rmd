@@ -1,12 +1,17 @@
 ---
 title: "Harvard Stat 115/215 HW 1"
-author: "Your Name"
-date: "Date"
+author: "Nabib Ahmed"
+date: "Due Sunday, Febraury 7, 2021"
 output: html_document
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(reticulate)
+use_virtualenv("r-reticulate")
+py_install("pandas")
+py_install("matplotlib")
+py_install("numpy")
 ```
 
 ### Finding the Stat 115 directory 
@@ -27,9 +32,61 @@ index: /2021/HW1/index/star_hg38_index
 ```
 
 ```{r q1, engine="bash", eval = FALSE}
-# your bash code here
+# transitioning from the login node to the computing node
+srun --nodes=1 --ntasks-per-node=1 --mem=64G --cpus-per-task=8 --time=06:00:00 --pty bash -i
+
+# go to home directory
+cd ${HOME}
+
+# load STAR module
+module load STAR/2.6.0c-fasrc01
+
+# perform the alignment
+STAR --genomeDir /n/stat115/2021/HW1/index/star_hg38_index --readFilesIn /n/stat115/2021/HW1/raw_data1/subA_l.fastq /n/stat115/2021/HW1/raw_data1/subA_r.fastq --runThreadN 8
+
+# print STAR report
+cat Log.final.out
 ```
 
+The final report is below:
+
+                                 Started job on |	Feb 07 16:41:52
+                             Started mapping on |	Feb 07 16:46:43
+                                    Finished on |	Feb 07 16:46:55
+       Mapping speed, Million of reads per hour |	9.00
+
+                          Number of input reads |	29988
+                      Average input read length |	96
+                                    UNIQUE READS:
+                   Uniquely mapped reads number |	19292
+                        Uniquely mapped reads % |	64.33%
+                          Average mapped length |	95.62
+                       Number of splices: Total |	2705
+            Number of splices: Annotated (sjdb) |	2675
+                       Number of splices: GT/AG |	2678
+                       Number of splices: GC/AG |	19
+                       Number of splices: AT/AC |	2
+               Number of splices: Non-canonical |	6
+                      Mismatch rate per base, % |	0.15%
+                         Deletion rate per base |	0.01%
+                        Deletion average length |	1.50
+                        Insertion rate per base |	0.01%
+                       Insertion average length |	1.28
+                             MULTI-MAPPING READS:
+        Number of reads mapped to multiple loci |	8902
+             % of reads mapped to multiple loci |	29.69%
+        Number of reads mapped to too many loci |	79
+             % of reads mapped to too many loci |	0.26%
+                                  UNMAPPED READS:
+       % of reads unmapped: too many mismatches |	0.00%
+                 % of reads unmapped: too short |	5.58%
+                     % of reads unmapped: other |	0.14%
+                                  CHIMERIC READS:
+                       Number of chimeric reads |	0
+                            % of chimeric reads |	0.00%
+                            
+
+From the table, there are 19292 reads that are uniquely mappable. The number of reads mappable is 8902 + 79 + 19292 = 28273 reads.
 
 ### Problem 2: RNA-seq quality control 
 
@@ -42,18 +99,114 @@ data:
 ```
 
 ```{r q2, engine="bash", eval = FALSE}
-# your bash code here
+# go to home directory
+cd ${HOME}
+
+# download anaconda
+module load Anaconda/5.0.1-fasrc02
+
+# download R
+module load R
+
+# create virtual environment
+conda create -n nahmed python=2.7
+
+# activate virtual environment
+source activate nahmed
+
+# install bioconda
+conda install -c bioconda rseqc
+
+# running tin.py
+python ${HOME}/.conda/envs/nahmed/bin/tin.py -i /n/stat115/2021/HW1/raw_data2/bamFile -r /n/stat115/2021/HW1/raw_data2/hg38.HouseKeepingGenes.nochr.bed
+
+# on local terminal, copy over files (directory copy) to view
+scp -r stat215u2107@login.rc.fas.harvard.edu:HW1/Q2 "/Users/nahmed/Desktop/Local Spring 2021/STAT215/Coursework/HW1/Q2"
+
+# running geneBodyCoverage.py
+python ${HOME}/.conda/envs/nahmed/bin/geneBody_coverage.py -i /n/stat115/2021/HW1/raw_data2/bamFile -r /n/stat115/2021/HW1/raw_data2/hg38.HouseKeepingGenes.nochr.bed -o "geneBodyCoverage"
+
+# on local terminal, copy over files to view
+scp stat215u2107@login.rc.fas.harvard.edu:geneBodyCoverage.geneBodyCoverage.curves.pdf "/Users/nahmed/Desktop/Local Spring 2021/STAT215/Coursework/HW1/Q2"
+
+scp stat215u2107@login.rc.fas.harvard.edu:geneBodyCoverage.geneBodyCoverage.heatMap.pdf "/Users/nahmed/Desktop/Local Spring 2021/STAT215/Coursework/HW1/Q2"
+
+scp stat215u2107@login.rc.fas.harvard.edu:geneBodyCoverage.geneBodyCoverage.r "/Users/nahmed/Desktop/Local Spring 2021/STAT215/Coursework/HW1/Q2"
+
+scp stat215u2107@login.rc.fas.harvard.edu:geneBodyCoverage.geneBodyCoverage.txt "/Users/nahmed/Desktop/Local Spring 2021/STAT215/Coursework/HW1/Q2"
+
+scp stat215u2107@login.rc.fas.harvard.edu:HW1/Q2/log.txt "/Users/nahmed/Desktop/Local Spring 2021/STAT215/Coursework/HW1/Q2"
 ```
 
+From running tin.py, these are the statistics I got.
+
+|   | TIN (mean) | TIN (median) | TIN (stdev) |
+|:-:|:----------:|:------------:|:-----------:|
+| W |    45.74   |     45.48    |    21.33    |
+| X |    53.78   |     55.81    |    20.62    |
+| Y |    56.20   |     58.76    |    19.80    |
+| Z |    24.55   |     21.92    |    14.20    |
+
+From this table, the odd sample seems to be Z with much lower mean and median the other 3 samples.
+
+From running geneBody_coverage.py, I get the following graph:
+```{r out.height = "460px", out.width='800px', echo=F}
+knitr::include_graphics("./Q2/geneBodyCoverage.geneBodyCoverage.curves.pdf")
+```
+
+Looking at this graph, it confirms again the Z sample is the outlier because it's line bounces around coverage values as opposed to staying relative consistent in the middle section.
 
 ### Problem 3: Python programming
 
 **One output file of RSeQC is called geneBodyCoverage.txt which contains normalized reads mapped to each % of gene / transcript body. Suppose that we want to visualize all 4 samples together to quickly perform quality control. Write a python program to extract the values and name from each file. The same script should then draw the gene body coverage for all the samples (2 rows x 2 cols) in one figure. We provide an example with 3 x 2 samples in one figure. Please identify the worst sample by your result.**
 
-```{r q3}
-# your python code here
+```{python}
+# import libraries
+import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np
 ```
 
+
+```{python}
+# load in our data
+path = './Q2/geneBodyCoverage.geneBodyCoverage.txt'
+file = open(path, 'r')
+lines = file.readlines()
+
+# transforming data to pandas df
+percentile, W, Y, Z, X = lines
+
+percentile = percentile.split("\t")
+X = X.split("\t")
+Y = Y.split("\t")
+Z = Z.split("\t")
+W = W.split("\t")
+
+data = np.array([percentile, W, X, Y, Z])
+data = data.transpose()
+
+df = pd.DataFrame(data=data, columns=["Percentile", "W", "X", "Y", "Z"])
+df = df.drop(df.index[0])
+df = df.astype(float)
+
+# Making plots
+fig, axs = plt.subplots(2, 2)
+axs[0, 0].plot(df["Percentile"], df["W"])
+axs[0, 0].set_title('Sample W')
+axs[0, 0].set_ylabel("Read Number")
+axs[0, 1].plot(df["Percentile"], df["X"])
+axs[0, 1].set_title('Sample X')
+axs[1, 0].plot(df["Percentile"], df["Y"])
+axs[1, 0].set_title('Sample Y')
+axs[1, 0].set_xlabel("Percentile of Gene Body")
+axs[1, 0].set_ylabel("Read Number")
+axs[1, 1].plot(df["Percentile"], df["Z"])
+axs[1, 1].set_title('Sample Z')
+axs[1, 1].set_xlabel("Percentile of Gene Body")
+
+```
+Based on the python script and graphs, I once again conclude thaty sample Z is the worst sample (due to irregularity - bouncing around).
 
 ### Problem 4: RNA-seq quantification
 
@@ -66,14 +219,48 @@ data: /2021/HW1/raw_data2/
 module: STAR/2.6.0c-fasrc01, rsem/1.2.29-fasrc03, salmon/0.12.0-fasrc01
 index: /2021/HW1/index/salmon_hg38_index,/2021/HW1/index/rsem_hg38_index
 ```
-```{r q4, engine="bash"}
-# your bash code here
+```{r q4, engine="bash", eval = FALSE}
+# load salmon module
+module load salmon/0.12.0-fasrc01
+
+# salmon command
+salmon quant -i /n/stat115/2021/HW1/index/salmon_hg38_index -l A -r /n/stat115/2021/HW1/raw_data2/fastqFile/runX.fastq -p 16 -o ${HOME}
+
+# get gene with largest TPM
+sort -k4n quant.sf | tail -10
+
+# restart session to do RSEM
+exit()
+
+# transitioning from the login node to the computing node
+srun --nodes=1 --ntasks-per-node=1 --mem=64G --cpus-per-task=8 --time=06:00:00 --pty bash -i
+
+# go to home directory
+cd ${HOME}
+
+# load STAR module
+module load STAR/2.6.0c-fasrc01
+
+# STAR component
+STAR --genomeDir /n/stat115/2021/HW1/index/star_hg38_index --readFilesIn /n/stat115/2021/HW1/raw_data2/fastqFile/runX.fastq --runThreadN 16 --quantMode TranscriptomeSAM --outSAMtype BAM SortedByCoordinate
+
+# load RSEM
+module load rsem
+
+# RSEM
+rsem-calculate-expression --no-bam-output --time --bam -p 16 Aligned.toTranscriptome.out.bam /n/stat115/2021/HW1/index/rsem_hg38_index/rsem_index rsemOutput
 ```
+
+For this problem, I chose sample X. Using Salmon, I found the gene ENST00000361851 (which is MT-ATP8-201 Mitochondrially encoded ATP synthase membrane subunit 8 [Source:HGNC Symbol;Acc:HGNC:7415] from ensembl). The corresponding TPM is 40666.878526 and the corresponding FPKM is ....
+
+Using RSEM, I 
 
 
 ### Problem 5: Speed Comparison
 
 **Report the relative speed of STAR+RSEM and Salmon for the analyses of the sample. Comment on your results based on the lecture material.**
+
+For salmon, I look at the log and observed the start (2021-02-07 22:35:57.431) and end time (2021-02-07 22:37:12.266). It took about 1 minute and 15 seconds. For STAR+RSEM method, RSEM took 1 minute and 43 seconds (use --time option) (this time doesn't account for STAR making the BAM file which took around ~3 minutes). From this analysis, it seems Salmon is faster which make sense (since RSEM uses alignment which slows it down).
 
 
 ### Problem 6: 
