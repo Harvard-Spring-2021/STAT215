@@ -28,3 +28,5 @@ apeglm
 ggrepel
 EnhancedVolcano
 purrr
+ggfortify
+pROC
