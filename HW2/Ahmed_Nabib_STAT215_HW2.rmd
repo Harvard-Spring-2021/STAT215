@@ -798,7 +798,14 @@ Expression data for the 20 unknown samples are provided in unknown_samples.txt.
 ### Your code here
 # convert test to PCA
 # Source: https://stats.stackexchange.com/questions/2592/how-to-project-a-new-vector-onto-pca-space
+test_df = scale(test_data, res.pca$center, res.pca$scale) %*% res.pca$rotation
 
+# keep top 25 PC
+test_df = test_df[,c(1:25)]
+
+# make prediction
+predictions = elastic %>% predict(test_df)
+predictions
 ```
 
 ### Problem II.7: For Graduate students only
