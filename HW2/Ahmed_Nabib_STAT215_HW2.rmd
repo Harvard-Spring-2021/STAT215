@@ -346,32 +346,32 @@ with(subset(resApeT, padj<.01 & log2FoldChange<(-1)),
 Try kmeans (try k = 4 or 7) clustering to group differentially expressed genes into different clusters. How many genes are there in each cluster? Draw a heatmap showing gene clusters. 
 
 \textbf{Answer}: From Slack: For I.6,  you should subset Combat-corrected matrix by differentially expressed genes obtained from DESeq2. I will run kmeans (and heatmap) on combat.logTPM.df (ie log-transformed COMBAT expression matrix) to handle batch effect from the genes DESeq2 said were differentially expressed.
----- work ---
+
 ```{r}
 ### Your code here
 # subsetting differentially expressed genes from ComBat results
-i6.data = subset(combat.logTPM.df, rownames(combat.logTPM.df) %in% rownames(res.df))
+i6.data = subset(t(combat.logTPM.df), rownames(t(combat.logTPM.df)) %in% rownames(res.df))
 
 # removing NAs and scaling
 i6.data = scale(na.omit(i6.data))
 ``` 
 
-Trying kmeans with $k=4$. The composition of genes in the four categories are 603, 463, 608, and 354 (clusters 1-4).
+Trying kmeans with $k=4$. The composition of genes in the four categories are 448, 512, 711, and 356 (clusters 1-4).
 ```{r}
 set.seed(215)
 k4 = kmeans(i6.data, centers = 4, nstart = 25)
-fviz_cluster(k4, data = i6.data)
+fviz_cluster(k4, data = i6.data, geom="point")
 table(k4$cluster)
 ```
 
-Trying kmeans with $k=7$. The composition of genes in the four categories are 303, 418, 257, 255, 266, 257, and 272 (clusters 1-7).
+Trying kmeans with $k=7$. The composition of genes in the four categories are 429, 298, 245, 181, 293, 266, and 315 (clusters 1-7).
 ```{r}
 set.seed(215)
 k7 = kmeans(i6.data, centers = 7, nstart = 25)
-fviz_cluster(k7, data = i6.data)
+fviz_cluster(k7, data = i6.data, geom="point")
 table(k7$cluster)
 ```
-Comparing $k=4$ and $k=7$, I would say they performed fairly similar in splitting up the groups. However, I think $k=4$ looks better and is more natural than $k=7$. The elbow graph below agrees with a more prominent bend at $k=4$ compared to $k=7$. Analyzing the elbow graph more, it seems the sharpest bend is at $k=2$ (which to me make sense since we're working with 2 types of tissue sample - tumor and normal). However since $k=7$ is the magic number, we'll stick with that!
+Comparing $k=4$ and $k=7$, I would say they performed fairly similar in splitting up the groups. However, I think $k=4$ looks better and is more natural than $k=7$ (no awkward spaces in the cluster like the orange group for $k=7$). The elbow graph below agrees with a more prominent bend at $k=4$ compared to $k=7$. Analyzing the elbow graph more, it seems the sharpest bend is at $k=2$. However since $k=7$ is the magic number from lecture, we'll stick with that!
 
 ```{r}
 set.seed(215)
@@ -392,7 +392,7 @@ plot(k.values, wss_values,
        xlab="Number of clusters K",
        ylab="Total within-clusters sum of squares")
 ```
-I drew a heatmap that is sample (x-axis) vs gene (y-axis) based on $k=7$ clusters (magic number from lecture). I remove the row titles since it was hard to read (all on top of one another). Look at the heatmap, each cluster has a distinctive pattern/trend. Furthermore, there's a visible distinction as we go from the normal samples to the tumor samples. Thus the heatmap shows a difference between tumor and normal tissues (as we'd expect).
+I drew a heatmap that is sample (x-axis) vs gene (y-axis) based on $k=7$ clusters (magic number from lecture). I remove the row titles since it was hard to read (all on top of one another). Look at the heatmap, each cluster has a distinctive pattern/trend. Furthermore, there's a visible distinction as we go from the normal samples to the tumor samples. Thus the heatmap shows a difference in gene expression between tumor and normal tissues (as we'd expect).
 ```{r}
 set.seed(215)
 Heatmap(i6.data, name = "gene expression", 
@@ -436,7 +436,7 @@ If I ran DESeq2 without removing batch effect, I would get 1352 differential gen
 Analyzing their kmeans for $k=4$ and $k=7$. I will subset into the original data set.
 ```{r}
 # subsetting differentially expressed genes from ComBat results
-i7.data = subset(logTPM.df, rownames(logTPM.df) %in% rownames(res.df.i7))
+i7.data = subset(t(logTPM.df), rownames(t(logTPM.df)) %in% rownames(res.df.i7))
 
 # removing NAs and scaling
 i7.data = scale(na.omit(i7.data))
@@ -445,26 +445,26 @@ i7.data = scale(na.omit(i7.data))
 ```{r}
 set.seed(215)
 k4.i7 = kmeans(i7.data, centers = 4, nstart = 25)
-fviz_cluster(k4.i7, data = i7.data)
+fviz_cluster(k4.i7, data = i7.data, geom="point")
 table(k4.i7$cluster)
 
 k7.i7 = kmeans(i7.data, centers = 7, nstart = 25)
-fviz_cluster(k7.i7, data = i7.data)
+fviz_cluster(k7.i7, data = i7.data, geom="point")
 table(k7.i7$cluster)
 ```
-The respective cluster size for $k=4$ is 306, 240, 426, and 380 . The respective cluster size for $k=7$ is 269, 175, 141, 167, 168, 205, and 227. The clusters for $k=4$ look similar, but for $k=7$, this DESeq2 analysis did worse. The purple region for example has an awkward point that touches the blue cluster - that point would be better classified in the blue cluster. Similarly, for the pink region has an awkward space and would be better to partition that cluster to neighboring clusters - maybe the bottom portion should be blue. The cluster plot in I.6 didn't have these issues.
+The respective cluster size for $k=4$ is 231, 461, 306, and 351. The respective cluster size for $k=7$ is 187, 234, 149, 144, 222, 154, and 259. The clusters for $k=4$ and $k=7$ look similar. It seems kmeans algorithm is good at finding clusters of gene despite batch effect.
 
-Thus, I would say that batch effect removal gives better results as seen by the issues with the cluster plots. Better cluster plots mean more interpretable results.
+Thus, I would say that batch effect removal doesn't really gives better results as seen by the kmeans cluster plots.
 
 ```{r}
 set.seed(215)
 Heatmap(i7.data, name = "gene expression", 
         row_km = 7,
         column_title = "HeatMap",
-        column_order = colnames(i6.data),
+        column_order = colnames(i7.data),
         show_row_names = FALSE)
 ```
-For the heatmap, I could not make out a difference between this and the heatmap from I.6
+For the heatmap, I could not make out a difference between this and the heatmap from I.6 - looked fairly similar.
 
 
 ### Problem I.8
