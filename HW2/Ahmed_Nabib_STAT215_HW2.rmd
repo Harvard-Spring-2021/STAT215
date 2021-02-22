@@ -57,6 +57,7 @@ library(fgsea)
 library(pheatmap)
 library(ComplexHeatmap)
 ```
+
 ```{r, cache=TRUE}
 # additional libraries
 library(factoextra)
@@ -65,6 +66,7 @@ library(readr)
 library(apeglm)
 library(EnhancedVolcano)
 library(ComplexHeatmap)
+library(purrr)
 ```
 \textbf{Answer}: Successfully install all the package to my RStudio. I also included additional libraries.
 
@@ -528,11 +530,34 @@ You will need the following libraries in R: ggplot2 and ggfortify for plotting, 
 
 All data for Part II are provided at /n/stat115/2021/HW2/raw_data2.
 
-```{r, warning=FALSE, cache=FALSE, message=FALSE}
+```{r, warning=FALSE, cache=TRUE, message=FALSE}
 library(ggplot2)
 library(ggfortify)
 library(pROC)
 library(caret)
+```
+
+```{r}
+# additional libraries
+
+```
+
+
+```{r, engine="bash", eval = FALSE}
+# transfer data to local directory (on local terminal)
+scp -r stat215u2107@login.rc.fas.harvard.edu:/n/stat115/2021/HW2/raw_data2 "Q2"
+```
+
+```{r, cache=TRUE}
+# read in data
+train_label = read.delim("Q2/raw_data2/BRCA_phenotype.txt",
+                       header = TRUE, stringsAsFactors = FALSE, quote = "", sep = "\t")
+train_data = read.delim("Q2/raw_data2/BRCA_zscore_data.txt",
+                       header = TRUE, stringsAsFactors = FALSE, quote = "", sep = "\t")
+test_label = read.delim("Q2/raw_data2/diagnosis.txt",
+                       header = TRUE, stringsAsFactors = FALSE, quote = "", sep = "\t")
+test_data = read.delim("Q2/raw_data2/unknown_samples.txt",
+                       header = TRUE, stringsAsFactors = FALSE, quote = "", sep = "\t")
 ```
 
 ### Problem II.1
@@ -541,9 +566,10 @@ Run PCA for dimension reduction on the 100 samples with known labels, and draw t
 
 z-score normalized data are provided in BRCA_zscore_data.txt. Phenotype data is in BRCA_phenotype.txt.
 
-```{r}
+\textbf{Answer}:
+```{r, cache=TRUE}
 ### Your code here
-
+res.pca = prcomp(train_data, scale = TRUE, center = TRUE)
 ```
 
 ### Problem II.2
