@@ -37,7 +37,7 @@ dplyr package is used for data frame manipulations in R;
 
 fgsea package is used for gene-set enrichment analysis.
 
-```{r libraries, message = FALSE, cache=TRUE}
+```{r libraries, message = FALSE}
 # ```{r install, eval = FALSE}
 # if (!requireNamespace("BiocManager", quietly = TRUE))
 #     install.packages("BiocManager")
@@ -91,7 +91,7 @@ scp stat215u2107@login.rc.fas.harvard.edu:/n/stat115/2021/HW2/raw_data1/tx2gene.
 ```
 
 I load in my data files. I use tximport which takes my Salmon results and tx2gene csv to return a simple list with matrices, "abundance", "counts", and "length", where the transcript level information is summarized to the gene-level. I also rename the columns accordingly.
-```{r, cache=TRUE}
+```{r}
 ### Your code here
 # read data files
 batch = read.csv("Q1/batch.csv")
@@ -109,22 +109,25 @@ colnames(txi[["abundance"]]) = batch$X
 colnames(txi[["counts"]]) = batch$X
 colnames(txi[["length"]]) = batch$X
 ```
-I perform a log2(TPM+2) transform on the TPM data to resolve issues with 0 values (as instructed in the prompt and slack) and negative values for comparsion in Q1.3.
+I perform a log2(TPM+1) transform on the TPM data to resolve issues with 0 values (as instructed in the prompt and slack) and negative values for comparison in Q1.3. I also remove zero variance genes from my dataset.
 ```{r}
 # NEED TO FIX
 # getting the transcript-level TPM values
 TPM = txi[["abundance"]]
 TPM.df = data.frame(TPM)
 
-# Taking log2(TPM+2) transformation (resolves issue with 0s and negatives)
-logTPM = log2(TPM+2)
-logTPM.df = data.frame(logTPM)
+# Taking log2(TPM+1) transformation (resolves issue with 0s and negatives)
+logTPM = log2(TPM+1)
+logTPM.df = data.frame(t(logTPM))
+
+# remove zero variance gene
+logTPM.df = logTPM.df[,-nearZeroVar(logTPM.df)]
 ```
 
-Using prcomp, I perform PCA on the logTPM values. I make the scree plot and see the first two principal components account for ~96.4% of the total variance.
+Using prcomp, I perform PCA on the logTPM values. I make the scree plot and see the first two principal components account for ~42.3% of the total variance.
 ```{r}
 # Perform PCA of the samples using log2 transformed TPM values & making scree plot
-res.pca = prcomp(logTPM.df, scale = TRUE)
+res.pca = prcomp(logTPM.df, scale = TRUE, center = TRUE)
 pca.var.per = round(res.pca$sdev^2/sum(res.pca$sdev^2)*100,1)
 fviz_eig(res.pca, addlabels=TRUE, ylim=c(0,100),
          geom=c("bar", "line"), barfill="gold",
@@ -133,27 +136,29 @@ fviz_eig(res.pca, addlabels=TRUE, ylim=c(0,100),
          x="Principal Components", y="% of variances")
 ```
 Using the first two principal components, I plot my batches. I designated shape for tissue samples and color for batch.
+
 ```{r}
-# making PCA graph data
-pca_data = data.frame(res.pca[["rotation"]])
-pca_data$X = rownames(pca_data)
-pca_data = merge(batch, pca_data, by.y=c("X"))
+# making pca plot data frame
+pca_plot_data = data.frame(sample = rownames(res.pca$x),
+                           X = res.pca$x[,1], 
+                           Y = res.pca$x[,2],
+                           batch = batch$batch,
+                           tissue = batch$tissue)
 
 # plot PCA graph
 # shapes for tissues, colors for batch
-ggplot(data=pca_data, aes(x=PC1, y=PC2, shape=tissue, color=factor(batch))) +
+ggplot(data=pca_plot_data, aes(x=X, y=Y, shape=tissue, color=factor(batch))) +
   xlab(paste("PC1: ",pca.var.per[1],"%",sep ="")) +
   ylab(paste("PC2: ",pca.var.per[2],"%",sep ="")) +
-  geom_point(size= 7) +
+  geom_point(size=7) +
   ggtitle("PCA Graph (PC1 vs PC2)")
 ```
-From the PCA graph above, we see that for batch 1, tumor and normal tissue are on separate corners whereas for batch 2, tumor and normal tissues are in the same corner. I would expect the relationship between tumor and normal tissues to be the same between the batches - given that the two batches show different patterns, this PCA plot suggest potential batch effect.
+From the PCA graph above, we see that for batch 1, tumor and normal tissue are on separate sides (tumor on the right and normal the left). Whereas for batch 2, tumor and normal tissues are in the same side/area. I would expect the relationship between tumor and normal tissues to be the same between the batches - given that the two batches show different patterns, this PCA plot suggest potential batch effect.
 
 Now let's try to use hierarchical clustering for these samples for checking for batch effects on logTPM values.
 ```{r}
 # making and scaling logTPM values
-hc.logTPM = t(logTPM)
-hc.logTPM = scale(hc.logTPM)
+hc.logTPM = scale(logTPM.df)
 
 # hierarchical clustering using euclidean
 dist.hc.logTPM = dist(hc.logTPM, method = "euclidean")
@@ -170,7 +175,7 @@ The samples N1-5 and T1-5 are batch 2; the samples N6-10 and T6-10 are batch 1. 
 # plotting correlation heatmap
 pheatmap(cor(logTPM))
 ```
-Following up with additional analysis with the pheatmap command, I see further proof of batch effect - the samples within batch 2 are more correlated each other than tumor tissues between batches and normal tissues between batches as we should expect.
+Following up with additional analysis with the pheatmap command, I see further proof of batch effect - the samples within batch 2 (T1-5 and N1-5) are more correlated each other than tumor tissues between batches and normal tissues between batches as we should expect.
 
 
 ### Problem I.3
@@ -178,30 +183,29 @@ Following up with additional analysis with the pheatmap command, I see further p
 Run COMBAT on the samples to remove the batch effect. Visualize the results using a similar PCA and hierarchical clustering as Problem 2. Provide evidence that the batch effects are successfully adjusted. 
 
 \textbf{Answer}: I ran COMBAT on TPM (as per instructions on slack). I need to filter out genes with zero variance - I used nearZeroVar function from caret.
-```{r, cache=TRUE}
+```{r}
 ### Your code here
-# remaking TPM dataframe
+# remaking TPM dataframe for consistency
 q2.TPM = txi[["abundance"]]
-q2.TPM.df = data.frame(q2.TPM)
+q2.TPM.df = data.frame(t(q2.TPM))
 
-# removing zero variance rows
-q2.TPM.df = q2.TPM.df[-nearZeroVar(t(q2.TPM.df)),]
+# removing zero variance genes
+q2.TPM.df = q2.TPM.df[, -nearZeroVar(q2.TPM.df)]
 
 # performing combat analysis
-combat_dat = ComBat(q2.TPM.df, pca_data$batch, par.prior=TRUE)
+combat_dat = ComBat(t(q2.TPM.df), batch$batch, par.prior=TRUE)
 ```
-
-Then I do log2(combat_dat+2) transform (to handle zero value and negatives) those results to run PCA, hierarchical clustering, and pheatmap analysis.
+Then I do log2(combat_dat+1) transform (to handle zero value and negatives) those results to run PCA, hierarchical clustering, and pheatmap analysis.
 ```{r}
 # Taking log2(combat_dat+1) transformation (resolves issue with 0s and negatives)
-combat.logTPM = log2(combat_dat+2)
-combat.logTPM.df = data.frame(combat.logTPM)
+combat.logTPM = log2(combat_dat+1)
+combat.logTPM.df = data.frame(t(combat.logTPM))
 ```
 
-Using prcomp, I perform PCA on the post ComBat logTPM values. I make the scree plot and see the first two principal components account for ~96.9% of the total variance.
+Using prcomp, I perform PCA on the post ComBat logTPM values. I make the scree plot and see the first two principal components account for ~38.8% of the total variance.
 ```{r}
 # Perform PCA of the samples using log2 transformed combat TPM values & making scree plot
-res.pca = prcomp(combat.logTPM.df, scale = TRUE)
+res.pca = prcomp(combat.logTPM.df, scale = TRUE, center = TRUE)
 pca.var.per = round(res.pca$sdev^2/sum(res.pca$sdev^2)*100,1)
 fviz_eig(res.pca, addlabels=TRUE, ylim=c(0,100),
          geom=c("bar", "line"), barfill="gold",
@@ -211,37 +215,38 @@ fviz_eig(res.pca, addlabels=TRUE, ylim=c(0,100),
 ```
 Using the first two principal components, I plot my batches post ComBat. I designated shape for tissue samples and color for batch as before.
 ```{r}
-# making PCA graph data
-pca_data = data.frame(res.pca[["rotation"]])
-pca_data$X = rownames(pca_data)
-pca_data = merge(batch, pca_data, by.y=c("X"))
+# making pca plot data frame
+pca_plot_data = data.frame(sample = rownames(res.pca$x),
+                           X = res.pca$x[,1], 
+                           Y = res.pca$x[,2],
+                           batch = batch$batch,
+                           tissue = batch$tissue)
 
 # plot PCA graph
 # shapes for tissues, colors for batch
-ggplot(data=pca_data, aes(x=PC1, y=PC2, shape=tissue, color=factor(batch))) +
+ggplot(data=pca_plot_data, aes(x=X, y=Y, shape=tissue, color=factor(batch))) +
   xlab(paste("PC1: ",pca.var.per[1],"%",sep ="")) +
   ylab(paste("PC2: ",pca.var.per[2],"%",sep ="")) +
-  geom_point(size= 7) +
-  ggtitle("PCA Graph Post ComBat (PC1 vs PC2)")
+  geom_point(size=7) +
+  ggtitle("PCA Graph (PC1 vs PC2) - Post ComBat")
 ```
-From the PCA graph above, we see batch 1 and batch 2 appear more similar, with their tissue sample being located in the upper right corner. This PCA graph is different from the original and shows that ComBat helped to address potential batch effects as the pattern in the two batches are more a like as we should expect.
+From the PCA graph above, we see batch 1 and batch 2 appear more similar. Batch 1 and 2's tumor tissue reside in the same area of the graph and the same is true for the normal tissue. The distinction between the tissue type is much more visible (as we would expect)! This shows that ComBat helped to address potential batch effects as the pattern between normal vs tumor tissues are more similar in the two batches (unlike in QI.2)
 
 Now let's try to use hierarchical clustering for these samples for checking for batch effects on post ComBat logTPM values.
 ```{r}
 # making and scaling logTPM values
-hc.logTPM = t(combat.logTPM)
-hc.logTPM = scale(hc.logTPM)
+combat.hc.logTPM = scale(combat.logTPM.df)
 
 # hierarchical clustering using euclidean
-dist.hc.logTPM = dist(hc.logTPM, method = "euclidean")
+combat.dist.hc.logTPM = dist(combat.hc.logTPM, method = "euclidean")
 
 # Hierarchical clustering using Complete Linkage
-hc1 <- hclust(dist.hc.logTPM, method = "complete" )
+combat.hc1 <- hclust(combat.dist.hc.logTPM, method = "complete" )
 
 # Plot the obtained dendrogram
 plot(hc1, cex = 0.6, hang = -1)
 ```
-The samples N1-5 and T1-5 are batch 2; the samples N6-10 and T6-10 are batch 1. The dendrogram is more like what we should expect with clustering happening based on tissue types (tumor vs normal) as opposed to batch. We see that normal tissues cells were clustered with each other before being added to a group with tumor tissues (and vice versa for tumor tissues).
+The samples N1-5 and T1-5 are batch 2; the samples N6-10 and T6-10 are batch 1. The dendrogram is more like what we should expect with clustering happening based on tissue types (tumor vs normal) as opposed to batch. We see that normal tissues cells were clustered with each other before being added to a group with tumor tissues (and vice versa for tumor tissues). For example, samples N1-5 clustered and T1-5 clustered before being cluster together. Similarly, on the right, T6-10 clustered and N6-10 clustered before clustering with another tissue type.
 
 ```{r}
 # plotting correlation heatmap
@@ -293,7 +298,7 @@ res.df = res.df[order(res.df$log2FoldChange),]
 head(res.df, 5)
 tail(res.df, 5)
 ```
-Since our condition is tissue_Tumor_vs_Normal, I assume negative log2foldchange values correspond to Tumor. Thus, the 5 most expressed gene for Tumor tissues is FABP7, UGT2B28, SOX10, SMYD1, and KRT14. For Normal tissues CASP14, TRPA1, HOXB13, CLEC3A, SLC30A8. (If I got the direction wrong, my apologize for misinterpreting).
+Since our condition is tissue_Tumor_vs_Normal, I assume negative log2foldchange values correspond to Normal. Thus, the 5 most expressed gene for Normal tissues is FABP7, UGT2B28, SOX10, SMYD1, and KRT14. For tumor tissues CASP14, TRPA1, HOXB13, CLEC3A, SLC30A8. (If I got the direction wrong, my apologize for misinterpreting).
 
 
 ### Problem I.5
@@ -341,7 +346,7 @@ with(subset(resApeT, padj<.01 & log2FoldChange<(-1)),
 Try kmeans (try k = 4 or 7) clustering to group differentially expressed genes into different clusters. How many genes are there in each cluster? Draw a heatmap showing gene clusters. 
 
 \textbf{Answer}: From Slack: For I.6,  you should subset Combat-corrected matrix by differentially expressed genes obtained from DESeq2. I will run kmeans (and heatmap) on combat.logTPM.df (ie log-transformed COMBAT expression matrix) to handle batch effect from the genes DESeq2 said were differentially expressed.
-
+---- work ---
 ```{r}
 ### Your code here
 # subsetting differentially expressed genes from ComBat results
