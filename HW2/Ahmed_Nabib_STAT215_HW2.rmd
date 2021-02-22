@@ -540,7 +540,11 @@ library(caret)
 
 ```{r}
 # additional libraries
-
+library(e1071)
+library(MASS)
+library(glmnet)
+library(kernlab)
+library(randomForest)
 ```
 
 
@@ -621,19 +625,101 @@ abline(v=25, col="blue", lty=3)
 
 Apply machine learning methods (KNN, logistic regression, Ridge regression, LASSO, ElasticNet, random forest, and support vector machines) on the top 25 PCs of the training data and 5-fold cross validation to classify the samples. caret and MASS already implemented all of the machine learning methods, including cross-validation, so calling each is only one command. In order to get consistent results from different runs, use set.seed(). 
 
-```{r}
-### Your code here
+\textbf{Answer}: As per Slack, KNN and SVM need to be scale since it uses Euclidean distances. As for the other models, I used caret and specified models based on Lab and Slack.
 
+```{r, cache=TRUE}
+### Your code here
+set.seed(215)
+
+# filter for the 25 top PCs
+train_df = data.frame(res.pca$x[,c(1:25)])
+train_outcome = data.frame(sample = rownames(train_df))
+train_outcome = merge(train_outcome, train_label, by="sample")
+train_outcome$phenotype = as.factor(train_outcome$phenotype)
+
+# preProcessing for algorithms using Euclidean distances
+scaled_train_df = predict(preProcess(train_df, method = c("center", "scale")), 
+                          train_df)
+
+# fixed parameters
+control = trainControl(method = "cv", 
+                       number = 5, 
+                       savePredictions = TRUE,
+                       classProbs = TRUE)
+metric = "Accuracy"
+lambda = 10^seq(-3, 3, length = 100)
+
+# KNN
+knn = train(x = scaled_train_df,
+            y = train_outcome$phenotype,
+            method = "knn", 
+            metric = metric,
+            trControl = control,
+            tuneGrid = expand.grid(k=seq(1,10,1)))
+
+# Logistic Regression
+# https://stackoverflow.com/questions/39550118/cross-validation-function-for-logistic-regression-in-r
+lr = train(x = train_df,
+           y = train_outcome$phenotype,
+           method = "glm",
+           family = binomial(),
+           metric = metric,
+           trControl = control)
+
+# Ridge Regression
+ridge = train(x = train_df,
+              y = train_outcome$phenotype,
+              method = "glmnet",
+              trControl = control,
+              tuneGrid = expand.grid(alpha = 0, lambda = lambda))
+
+# LASSO
+lasso = train(x = train_df,
+              y = train_outcome$phenotype,
+              method = "glmnet",
+              trControl = control,
+              tuneGrid = expand.grid(alpha = 1, lambda = lambda))
+
+# ElasticNet
+elastic = train(x = train_df,
+                y = train_outcome$phenotype,
+                method = "glmnet",
+                trControl = control,
+                tuneLength = 10)
+
+# Random Forest
+rf = train(x = train_df,
+           y = train_outcome$phenotype,
+           method = "rf",
+           trControl = control,
+           tuneGrid = expand.grid(mtry=seq(1,15,1)))
+
+# SVM
+svm = train(x = train_df,
+            y = train_outcome$phenotype,
+            method = "svmLinear",
+            trControl = control,
+            tuneGrid = expand.grid(C=c(0.01, 0.1, 1, 10)))
 ```
 
 ### Problem II.4
 
 Summarize the performance of each machine learning method, in terms of accuracy and kappa. 
 
+\textbf{Answer}: Below is a table summarizing my results. For models that had hyper parameters, I specific the parameters and only show that model's accuracy and kappa.
+
+
 ```{r}
 ### Your code here
-
+knn[["results"]]
+lr[["results"]]
+ridge[["results"]]
+lasso[["results"]]
+elastic[["results"]]
+rf[["results"]]
+svm[["results"]]
 ```
+
 
 ### Problem II.5: For Graduate students only
 
