@@ -58,7 +58,7 @@ library(pheatmap)
 library(ComplexHeatmap)
 ```
 
-```{r, cache=TRUE}
+```{r}
 # additional libraries
 library(factoextra)
 library(caret)
@@ -553,7 +553,7 @@ library(randomForest)
 scp -r stat215u2107@login.rc.fas.harvard.edu:/n/stat115/2021/HW2/raw_data2 "Q2"
 ```
 
-```{r, cache=TRUE}
+```{r}
 # read in data
 train_label = read.delim("Q2/raw_data2/BRCA_phenotype.txt",
                        header = TRUE, stringsAsFactors = FALSE, quote = "", sep = "\t")
@@ -572,7 +572,7 @@ Run PCA for dimension reduction on the 100 samples with known labels, and draw t
 z-score normalized data are provided in BRCA_zscore_data.txt. Phenotype data is in BRCA_phenotype.txt.
 
 \textbf{Answer}: We have a 100 samples (rows) and many gene variables (columns). 
-```{r, cache=TRUE}
+```{r}
 ### Your code here
 # pca with prcomp command
 res.pca = prcomp(train_data, scale = TRUE, center = TRUE)
@@ -706,28 +706,84 @@ svm = train(x = train_df,
 
 Summarize the performance of each machine learning method, in terms of accuracy and kappa. 
 
-\textbf{Answer}: Below is a table summarizing my results. For models that had hyper parameters, I specific the parameters and only show that model's accuracy and kappa.
+\textbf{Answer}: Below is a table summarizing my results. For models that had hyper parameters, I specified the hyper parameters that produced the best model and only show that model's accuracy and kappa.
 
+\begin{table}[]
+\begin{tabular}{lcc}
+                                             & accuracy  & kappa     \\
+KNN ($k=1$)                                  & 0.76      & 0.5219608 \\
+Logistic                                     & 0.83      & 0.659596  \\
+Ridge ($\lambda = 0.03764936$)               & 0.9504762 & 0.9009955 \\
+Lasso ($\lambda = 0.02477076$)               & 0.9699499 & 0.9398274 \\
+Elastic ($\alpha=0.3, \lambda = 0.01163312$) & 0.9704762 & 0.9409955 \\
+Random Forest ($mtry = 3$)                   & 0.9499499 & 0.8995929 \\
+SVM ($C=0.01$)                               & 0.9304261 & 0.8604734
+\end{tabular}
+\end{table}
 
+From this analysis of kappa and accuracy, the best performing model was ElasticNet with the highest accuracy (0.9704762) and highest kappa (0.9409955).
 ```{r}
 ### Your code here
-knn[["results"]]
+# KNN summary
+knn_best = knn[["bestTune"]]
+knn_results = knn[["results"]]
+knn_results[knn_results$k == knn_best$k, ]
+
+# Logistic summary
 lr[["results"]]
-ridge[["results"]]
-lasso[["results"]]
-elastic[["results"]]
-rf[["results"]]
-svm[["results"]]
+
+# Ridge summary
+ridge_best = ridge[["bestTune"]]
+ridge_results = ridge[["results"]]
+ridge_results[ridge_results$lambda == ridge_best$lambda, ]
+
+# Lasso summary
+lasso_best = lasso[["bestTune"]]
+lasso_results = lasso[["results"]]
+lasso_results[lasso_results$lambda == lasso_best$lambda, ]
+
+# Elastic summary
+elastic_best = elastic[["bestTune"]]
+elastic_results = elastic[["results"]]
+elastic_results[elastic_results$lambda == elastic_best$lambda & 
+                  elastic_results$alpha == elastic_best$alpha, ]
+
+# Random Forest summary
+rf_best = rf[["bestTune"]]
+rf_results = rf[["results"]]
+rf_results[rf_results$mtry == rf_best$mtry,]
+
+# SVM summary
+svm_best = svm[["bestTune"]]
+svm_results = svm[["results"]]
+svm_results[svm_results$C == svm_best$C,]
 ```
 
 
 ### Problem II.5: For Graduate students only
 
-Compare the performance difference between logistic regression, Ridge, LASSO, and ElasticNet. In LASSO, how many PCs have non-zero coefficient? In ElasticNet, what is the lamda for Ridge and LASSO, respectively? 
+Compare the performance difference between logistic regression, Ridge, LASSO, and ElasticNet. In LASSO, how many PCs have non-zero coefficient? In ElasticNet, what is the lambda for Ridge and LASSO, respectively? 
+
+\textbf{Answer}: In logistic regression, the curve is fit to maximize the probability for the observed data. Ridge, Lasso, and ElasticNet add a penalty term to the regression to help address variance and issues of multicollinearity (correlations between predictor variables). The effect is that they shrink down the coefficients on predictors. The table below of coefficients demonstrates this effect - the coefficients in Ridge, Lasso, and Elastic are much smaller than the coefficients in logistic.
+
+Ridge regression adds a square penalty and the coefficients only asymptotically approach zero, but never reach it. Thus for the Ridge regression, even though the coefficients have shrunk, none of the coefficients are zero. Ridge regression is useful when most predictors are useful but as we saw in the scree plots of the PCA, the first few PCs actually accounted for most of the variation. Thus I would not deem ridge regression is the best model choice.
+
+Lasso regression adds an absolute value penalty and the the coefficients can shrink down to zero. Thus for the Lasso regression, we see 16 PCs have coefficient of zero (meaning 9 PCs have non-zero coefficient). Lasso is great when we have very few important predictors and lots of useless predictors.
+
+ElasticNet regression combines both the ridge and lasso penalty and it had the highest accuracy and kappa value out of all the models. The best ElasticNet model hyper parameters were $\alpha=0.3, \lambda = 0.01163312$; according to the r documentation, that means lasso penalty lambda is 0.3 and the ridge penalty lambda is 0.35. Coefficients can shrink to zero in ElasticNet (we see some zero coefficients but not as much as Lasso regression). It's optimal for situations were there are correlations between the predictors (which to me makes sense here with gene data).
 
 ```{r}
 ### Your code here
+# extracting coefficients from best models
+lr_coef = coef(lr$finalModel)
+ridge_coef = coef(ridge$finalModel, ridge$bestTune$lambda)
+lasso_coef = coef(lasso$finalModel, lasso$bestTune$lambda)
+elastic_coef = coef(elastic$finalModel, elastic$bestTune$lambda)
 
+# printing out table of coefficients
+coefs = data.frame(as.matrix(cbind(lr_coef, ridge_coef, lasso_coef, elastic_coef)))
+colnames(coefs) = c("Logistic", "Ridge", "Lasso", "Elastic")
+print(coefs)
 ```
 
 ### Problem II.6
@@ -736,8 +792,12 @@ Use the PCA projections in Q1 to obtain the first 25 PCs of the 20 unknown sampl
 
 Expression data for the 20 unknown samples are provided in unknown_samples.txt.
 
+\textbf{Answer}: Will use ElasticNet since it was best performing model.
+
 ```{r}
 ### Your code here
+# convert test to PCA
+# Source: https://stats.stackexchange.com/questions/2592/how-to-project-a-new-vector-onto-pca-space
 
 ```
 
