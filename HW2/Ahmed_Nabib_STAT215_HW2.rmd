@@ -477,7 +477,7 @@ From the batch-removed DESeq2 run results, extract the top 200 tumor-upregulated
 write_tsv(data.frame(rownames(tail(res.df, 200))), 
           path = "i.8.txt")
 ```
-Below is the enrichment table.
+Below is the enrichment table from David. Slack said to just post a screenshot.
 ![David Enrichment Table](i.8.david.png)
 
 
