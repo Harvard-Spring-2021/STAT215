@@ -111,6 +111,7 @@ colnames(txi[["length"]]) = batch$X
 ```
 I perform a log2(TPM+2) transform on the TPM data to resolve issues with 0 values (as instructed in the prompt and slack) and negative values for comparsion in Q1.3.
 ```{r}
+# NEED TO FIX
 # getting the transcript-level TPM values
 TPM = txi[["abundance"]]
 TPM.df = data.frame(TPM)
@@ -566,19 +567,54 @@ Run PCA for dimension reduction on the 100 samples with known labels, and draw t
 
 z-score normalized data are provided in BRCA_zscore_data.txt. Phenotype data is in BRCA_phenotype.txt.
 
-\textbf{Answer}:
+\textbf{Answer}: We have a 100 samples (rows) and many gene variables (columns). 
 ```{r, cache=TRUE}
 ### Your code here
+# pca with prcomp command
 res.pca = prcomp(train_data, scale = TRUE, center = TRUE)
+
+# scree plot
+pca.var.per = round(res.pca$sdev^2/sum(res.pca$sdev^2)*100,1)
+fviz_eig(res.pca, addlabels=TRUE, ylim=c(0,100), geom = c("bar", "line"), 
+         barfill = "gold", barcolor="grey", linecolor = "red", ncp=10) +
+  labs(title = "PCA Coverage",
+       x = "Principal Components", y = "% of variances")
 ```
+Based on the scree plot, the first two principal components capture 60.9% of the variance.
+
+```{r}
+# making pca plot data frame
+pca_plot_data = data.frame(sample = rownames(res.pca$x),
+                           X = res.pca$x[,1], 
+                           Y = res.pca$x[,2]) 
+pca_plot_data = merge(pca_plot_data, train_label, by="sample")
+
+# making pca plot
+ggplot(data = pca_plot_data, aes(x=X, y=Y, label=sample, color=phenotype)) +
+  geom_point() +
+  xlab(paste("PC1: ",pca.var.per[1],"%",sep ="")) +
+  ylab(paste("PC2: ",pca.var.per[2],"%",sep ="")) +
+  theme_bw() +
+  ggtitle("PCA Graph")
+```
+From the PCA graph, cancer and normal tissue seem to separate well from the first two PCs - there are visible clusters for the two types of tissues. However, normal and tumor tissue seems to have a close boundary to each other. Thus, it may not be clear which tissue type a new sample is if it falls in the boundary area between red and blue dots. Thus, I would not say this is sufficient to classify the unknown samples because there is uncertainty near the boundary area.
+
 
 ### Problem II.2
 
 Draw a plot showing the cumulative % variance captured from the top 100 PCs. How many PCs are needed to capture 90% of the variance? 
 
+\textbf{Answer}: I made a cumulative % variance captured plot. I would need 25 PCs to capture 90% of the variance. 
 ```{r}
 ### Your code here
+pca.var = res.pca$sdev^2/sum(res.pca$sdev^2)
+pca.var.acc = pca.var %>% accumulate(`+`)
+min(which(pca.var.acc > 0.9))
 
+plot(pca.var.acc, main="Cumulative % Variance Captured",
+     xlab="PC", ylab="Cumulative % Variance")
+abline(h=0.9, col="red", lty=2)
+abline(v=25, col="blue", lty=3)
 ```
 
 ### Problem II.3
