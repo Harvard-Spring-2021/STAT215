@@ -792,7 +792,7 @@ Use the PCA projections in Q1 to obtain the first 25 PCs of the 20 unknown sampl
 
 Expression data for the 20 unknown samples are provided in unknown_samples.txt.
 
-\textbf{Answer}: Will use ElasticNet since it was best performing model.
+\textbf{Answer}: Will use ElasticNet since it was best performing model. I list out the predictions.
 
 ```{r}
 ### Your code here
@@ -812,10 +812,21 @@ predictions
 
 Can you find out the top 3 genes that are most important in this prediction method in Q6? Do they have some known cancer relevance? 
 
+\textbf{Answer}: To find the top 3 genes that are most important in ElasticNet from Q6, I took the product of the absolute value of the rotation/loading matrix (of the 25 PCs) and the absolute value of the vector of the coefficient matrix from ElasticNet (PC importance) (reason for absolute value is per instruction on Slack). Then I find the components of the resulting vector that has the largest values.
+
 ```{r}
 ### Your code here
+# loading matrix
+loading_mtx = abs(as.matrix(res.pca$rotation[,c(1:25)]))
 
+# vector of coefficient
+impt_vector = abs(as.matrix(coef(elastic$finalModel, elastic$bestTune$lambda)[-1]))
+
+# contribution vector
+contributions = loading_mtx %*% impt_vector
+head(contributions[order(contributions, decreasing = TRUE), ], 3)
 ```
+The top 3 genes that are most important in this prediction method are SLC30A8, C16orf70, and NAT9. Looking online, I found that NAT9 and SLC30A8 are related to certain diseases - I could not find much on C16orf70. In general, I could not find any clear link to cancer with these gene (this maybe because I'm not a biologist).
 
 ### Problem II.8
 
