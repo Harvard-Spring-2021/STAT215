@@ -479,17 +479,45 @@ Run Gene Set Enrichment analysis (http://www.broadinstitute.org/gsea/index.jsp) 
 
 Mapping between gene sets and pathways is provided in /n/stat115/2021/HW2/raw_data1/c2.cp.kegg.v7.1.symbols.gmt file.
 
+\textbf{Answer}: I copied over the .gmt file via scp.
 ```{r, engine="bash", eval = FALSE}
 # transfer mapping to local directory (on local terminal)
-scp -r stat215u2107@login.rc.fas.harvard.edu:/n/stat115/2021/HW2/raw_data1/Salmon_results "Q1"
+scp stat215u2107@login.rc.fas.harvard.edu:/n/stat115/2021/HW2/raw_data1/c2.cp.kegg.v7.1.symbols.gmt "Q1"
 ```
 
-
-
-```{r, fig.width=10}
-### Your code here
-
+I rank out my DESeq2 data and made a plot.
+```{r}
+# ranking all genes in the data set
+gseaDat = res.df
+ranks = res.df$log2FoldChange
+names(ranks) = rownames(res.df)
+barplot(sort(ranks, decreasing = T))
 ```
+I import the pathway file and correct the shape for proper GSEA analysis.
+```{r}
+# loading in pathways data and correcting form
+pathways = read.delim("Q1/c2.cp.kegg.v7.1.symbols.gmt",
+                       header = FALSE, stringsAsFactors = FALSE, quote = "", sep = "\t")
+pathways = subset(pathways, select = -V2)
+pathways = t(pathways)
+colnames(pathways) = pathways[1,]
+pathways = pathways[-1,]
+pathways = data.frame(pathways)
+```
+
+I print the top five gene sets or pathways that best capture the differentially expressed genes between tumor than normal. They are KEGG_CELL_CYCLE, KEGG_RETINOL_METABOLISM, SFN, KEGG_PPAR_SIGNALING_PATHWAY, and KEGG_ECM_RECEPTOR_INTERACTION.
+
+Using the Broad Institute website, I saw that KEGG_CELL_CYCLE is related to mitotic cell cycle progression - this make sense as tumors are irregular production in cell mitosis. I also found the other pathways KEGG_PPAR_SIGNALING_PATHWAY and KEGG_ECM_RECEPTOR_INTERACTION related to cell proliferation which again makes sense for tumor data (since tumors are related to irregular cell production).
+```{r}
+# running GSEA
+fgseaRes <- fgsea(pathways, ranks, minSize=15, maxSize = 500, nperm=1000)
+head(fgseaRes[order(padj, -abs(NES)), ], n=5)
+```
+I plot the GSEA enrichment plot for the KEGG_CELL_CYCLE pathway.
+```{r}
+plotEnrichment(pathways[["KEGG_CELL_CYCLE"]], ranks)
+```
+
 
 
 ## Part II: Sample classification
