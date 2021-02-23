@@ -2,7 +2,7 @@
 title: "STAT215 HW2"
 Subtitle: "Differential Expression Analysis & Sample Classification"
 author: "Nabib Ahmed"
-date: "Due Date: Sun 2/21/2021 midnight "
+date: "Due Date: Sun 2/21/2021 midnight (submit 1 day late)"
 output:
   html_document: default
   pdf_document: default
@@ -265,7 +265,7 @@ Note: please use the raw_count columns of the Salmon result and convert these to
 Identify the top 5 most (by Log2FC) over expressed genes (FDR < 0.01) in tumor and normal, respectively.  
 
 \textbf{Answer}: As per slack message, I can use the counts from txi object. For my design matrix, I specified the batch then condition (tissue). Also per slack, the FDR is the padj in res dataframe below.
-```{r, cache=TRUE}
+```{r}
 ### Your code here
 # converting numeric to factor for design matrix
 ddsBatch = batch
@@ -513,7 +513,7 @@ pathways = pathways[-1,]
 pathways = data.frame(pathways)
 ```
 
-I print the top five gene sets or pathways that best capture the differentially expressed genes between tumor than normal. They are KEGG_CELL_CYCLE, KEGG_RETINOL_METABOLISM, SFN, KEGG_PPAR_SIGNALING_PATHWAY, and KEGG_ECM_RECEPTOR_INTERACTION.
+I print the top five gene sets or pathways that best capture the differentially expressed genes. They are KEGG_CELL_CYCLE, SFN, KEGG_RETINOL_METABOLISM, KEGG_PPAR_SIGNALING_PATHWAY, and KEGG_ECM_RECEPTOR_INTERACTION.
 
 Using the Broad Institute website, I saw that KEGG_CELL_CYCLE is related to mitotic cell cycle progression - this make sense as tumors are irregular production in cell mitosis. I also found the other pathways KEGG_PPAR_SIGNALING_PATHWAY and KEGG_ECM_RECEPTOR_INTERACTION related to cell proliferation which again makes sense for tumor data (since tumors are related to irregular cell production).
 ```{r}
@@ -536,7 +536,7 @@ You will need the following libraries in R: ggplot2 and ggfortify for plotting, 
 
 All data for Part II are provided at /n/stat115/2021/HW2/raw_data2.
 
-```{r, warning=FALSE, cache=TRUE, message=FALSE}
+```{r, warning=FALSE, message=FALSE}
 library(ggplot2)
 library(ggfortify)
 library(pROC)
@@ -550,6 +550,7 @@ library(MASS)
 library(glmnet)
 library(kernlab)
 library(randomForest)
+library(ROCR)
 ```
 
 
@@ -632,7 +633,7 @@ Apply machine learning methods (KNN, logistic regression, Ridge regression, LASS
 
 \textbf{Answer}: As per Slack, KNN and SVM need to be scale since it uses Euclidean distances. As for the other models, I used caret and specified models based on Lab and Slack.
 
-```{r, cache=TRUE}
+```{r}
 ### Your code here
 set.seed(215)
 
@@ -771,7 +772,7 @@ Compare the performance difference between logistic regression, Ridge, LASSO, an
 
 \textbf{Answer}: In logistic regression, the curve is fit to maximize the probability for the observed data. Ridge, Lasso, and ElasticNet add a penalty term to the regression to help address variance and issues of multicollinearity (correlations between predictor variables). The effect is that they shrink down the coefficients on predictors. The table below of coefficients demonstrates this effect - the coefficients in Ridge, Lasso, and Elastic are much smaller than the coefficients in logistic.
 
-Ridge regression adds a square penalty and the coefficients only asymptotically approach zero, but never reach it. Thus for the Ridge regression, even though the coefficients have shrunk, none of the coefficients are zero. Ridge regression is useful when most predictors are useful but as we saw in the scree plots of the PCA, the first few PCs actually accounted for most of the variation. Thus I would not deem ridge regression is the best model choice.
+Ridge regression adds a square penalty and the coefficients only asymptotically approach zero, but never reach it. Thus for the Ridge regression, even though the coefficients have shrunk, none of the coefficients are zero. Ridge regression is useful when most predictors are useful but as we saw in the scree plots of the PCA, the first few PCs actually accounted for most of the variation. Thus I would not deem ridge regression as the best model choice.
 
 Lasso regression adds an absolute value penalty and the the coefficients can shrink down to zero. Thus for the Lasso regression, we see 16 PCs have coefficient of zero (meaning 9 PCs have non-zero coefficient). Lasso is great when we have very few important predictors and lots of useless predictors.
 
@@ -817,7 +818,7 @@ predictions
 
 Can you find out the top 3 genes that are most important in this prediction method in Q6? Do they have some known cancer relevance? 
 
-\textbf{Answer}: To find the top 3 genes that are most important in ElasticNet from Q6, I took the product of the absolute value of the rotation/loading matrix (of the 25 PCs) and the absolute value of the vector of the coefficient matrix from ElasticNet (PC importance) (reason for absolute value is per instruction on Slack). Then I find the components of the resulting vector that has the largest values.
+\textbf{Answer}: To find the top 3 genes that are most important in ElasticNet from Q6, I took the product of the absolute value of the rotation/loading matrix (of the 25 PCs) and the absolute value of the vector of the coefficient matrix from ElasticNet (PC importance in the model) (reason for absolute value is per instruction on Slack). Then I find the components of the resulting vector that has the largest values.
 
 ```{r}
 ### Your code here
@@ -839,5 +840,46 @@ Suppose a pathologist later made diagnosis on the 20 unknown samples (load the d
 
 ```{r}
 ### Your code here
+# consolidated data frame of actual and predicted results
+results = data.frame(sample = test_label$sample,
+                     y = as.factor(test_label$phenotype),
+                     ypred = as.factor(predictions))
 
+# confusion matrix
+confusionMatrix(results$y, results$ypred)
 ```
+I made a confusion matrix on the model result. I see that it had an accuracy of 0.9 (with only 1 false positive and 1 false negative). 
+
+```{r}
+# ROC curve
+# predictions for ROC curve
+prediction_for_roc_curve = predict(elastic, test_df, type="prob")
+
+# specify the different tissue 
+classes = levels(as.factor(test_label$phenotype))
+
+# adopted from lab 4
+for (i in 1:2) {
+  true_values = ifelse(as.factor(test_label$phenotype)==classes[i],1,0)
+  pred = prediction(prediction_for_roc_curve[,i], true_values)
+  perf = performance(pred, "tpr", "fpr")
+  if (i==1) {
+    plot(perf, main="ROC Curve", col="green") 
+  }
+  else {
+    plot(perf, main="ROC Curve", col="red", add=TRUE) 
+  }
+  
+  # Calculate the AUC and print it to screen
+  auc.perf = performance(pred, measure = "auc")
+  print(auc.perf@y.values)
+}
+
+# add a legend to the graph
+legend("topright", inset=.05, title="Tissue Type",
+   c("Normal", "Tumor"), fill=c("green", "red"), horiz=TRUE)
+abline(a=0, b=1, lty=2, col="blue")
+```
+
+The prediction AUC is 0.9494949 for both Tumor and Normal samples. Looking at the ROC graph, I would say our model is good because it has aROC curve that is much higher than the baseline (dashed blue line).
+
