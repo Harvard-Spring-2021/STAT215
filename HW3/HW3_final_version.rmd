@@ -1,12 +1,17 @@
 ---
-title: 'STAT115/215 BIO/BST282 2021 HW3'
-author: '{Your name}'
+title: 'STAT215 2021 HW3'
+author: 'Nabib Ahmed'
 date: "Due date: 3/8,2021 @ 11:59pm"
 output: 
   html_document: default
   pdf_document: default
   word_document: default
 ---
+```{r, echo=FALSE}
+# setting work directory
+dir = "/Users/nabibahmed/Desktop/Local Spring 2021/STAT215/Coursework/HW3"
+setwd(dir)
+```
 
 # Motifs, ChIP-seq, and Gene Expression Integration
 
@@ -19,50 +24,166 @@ https://www.nature.com/articles/nprot.2012.101
 ## Part I. ChIP-seq peak calling
 
 ### Question 1
-**Usually we use BWA to map the reads to the genome for ChIP-seq experiment. We will give you one example ChIP-seq single-end sequenced .fastq file with only 1M reads. Run BWA on this file to Hg38 of the human genome assembly. Report the commands, logs files, and a snapshot / screenshot of the output to demonstrate your alignment procedure. What proportion of the reads are successfully mapped (to find at least one location) and what proportions are uniquely mapped (to find a single location) in the human genome in this test sample? We will save you some time and directly give you the BWA mapped BAM files for the full samples. **
+**Usually we use BWA to map the reads to the genome for ChIP-seq experiment. We will give you one example ChIP-seq single-end sequenced .fastq file with only 1M reads. Run BWA on this file to Hg38 of the human genome assembly. Report the commands, logs files, and a snapshot / screen shot of the output to demonstrate your alignment procedure. What proportion of the reads are successfully mapped (to find at least one location) and what proportions are uniquely mapped (to find a single location) in the human genome in this test sample? We will save you some time and directly give you the BWA mapped BAM files for the full samples. **
 
 Hint:  
 1). Target sample fastq file is stored as **/n/stat115/2021/HW3/tumor_1M.fastq** on Cannon.  
 2). The index file is stored as **/n/stat115/2021/HW3/bwa_hg38_index/hg38.fasta** on Cannon. Throughout this HW, all the coordinates are given in Hg38 version of the human genome assembly. 
 
+\textbf{Answer}: I use Lab 5 for reference for bash commands. I also provide screen shots of my BWA output and analysis using samtools.
+
 ```{r, engine='bash', eval=FALSE}
 # your bash code here
+# transitioning from the login node to the computing node
+srun --nodes=1 --ntasks-per-node=1 --mem=64G --cpus-per-task=8 --time=10:00:00 --pty bash -i
 
-#Answer
+# make work directory
+mkdir HW3/Q1
 
+# loading bwa module
+module load bwa/0.7.15-fasrc02
+
+# bwa analysis
+bwa mem /n/stat115/2021/HW3/bwa_hg38_index/hg38.fasta /n/stat115/2021/HW3/tumor_1M.fastq > HW3/Q1/tumor.sam
+
+# loading samtools module to acquire the summary statistics
+module load samtools/1.5-fasrc02
+
+# check the number of total reads and successfully mapped reads
+samtools flagstat HW3/Q1/tumor.sam
+
+# create a bam file of uniquely mapped reads
+samtools view -bq 1 HW3/Q1/tumor.sam > HW3/Q1/tumor_unique.bam
+
+# check the unique bam file to find the number of uniquely mapped reads
+samtools flagstat HW3/Q1/tumor_unique.bam
 ```
 
+Below is the screen shot of the bwa command. According Jiazhen on Slack: "If you directly type the commands, then the outputs will be printed as text on terminal instead of being saved in .out & .err. You can take a screen shot of those text output as well." Since I'm writing commands directly, I provide terminal output.
+![BWA Output](Q1/bwaOutput.png)
+Below is the screen shot of the flagstat (number of total reads and successfully mapped reads). From this, we conclude that the proportion of the reads that are successfully mapped is XXXX.
+![Samtool Summary](Q1/flagstat.png)
+
+Below is the screen shot of the flagstat (number of uniquely mapped reads). From this, we conclude that the proportion of the reads that are successfully mapped is XXXX.
+![Samtool Unique Summary](Q1/flagstatUnique.png)
+
+
+
+
+
+
+
 ### Question 2 **For Graduate Students Only**
-**In ChIP-seq experiments, when sequencing library preparation involves a PCR amplification step, it is common to observe multiple reads where identical nucleotide sequences are disproportionally represented in the final results. This is especially a problem in tissue ChIP-seq experiments (as compared to cell lines) when input cell numbers are low. Duplicated read % is sometimes a good way to QC your ChIP-seq sample, as high duplicated reads indicate PCR over amplification of the ChIP DNA. Removing these duplicated reads can improve the peak calling accuracy. Thus, it may be necessary to perform a duplicate read removal step, which flags identical reads and subsequently removes them from the dataset. Run this on your test sample (1M reads) (macs2 filterdup function). What % of reads are redundant? Note: when doing peak calling, MACS filters duplicated reads by default. **
+**In ChIP-seq experiments, when sequencing library preparation involves a PCR amplification step, it is common to observe multiple reads where identical nucleotide sequences are disproportionately represented in the final results. This is especially a problem in tissue ChIP-seq experiments (as compared to cell lines) when input cell numbers are low. Duplicated read % is sometimes a good way to QC your ChIP-seq sample, as high duplicated reads indicate PCR over amplification of the ChIP DNA. Removing these duplicated reads can improve the peak calling accuracy. Thus, it may be necessary to perform a duplicate read removal step, which flags identical reads and subsequently removes them from the dataset. Run this on your test sample (1M reads) (macs2 filterdup function). What % of reads are redundant? Note: when doing peak calling, MACS filters duplicated reads by default. **
 
 Hint:
 The test samples are stored as **/n/stat115/2021/HW3/tumor.bam** and **/n/stat115/2021/HW3/normal.bam** on Cannon.
 
+\textbf{Answer}: I use Lab 5 for reference for bash commands (using macs2 with keep-dup 1). I write commands directly so I will see the % of reads that are redundant on the terminal console. According to the clarification made by TF Jiazhen, "we are using the file listed in the question's (hint)" and not the file from Q1. I found the % of reads are redundant for tumor sample to be 17% and for normal samples to be 12%.
+
 ```{r, engine='bash', eval=FALSE}
 # your bash code here
+# make work directory
+mkdir HW3/Q2
 
-#Answer
+# loading in relevant modules
+module load centos6/0.0.1-fasrc01
+module load macs2/2.1.2_dev-fasrc01
 
+# tumor
+macs2 filterdup -i /n/stat115/2021/HW3/tumor.bam -g hs --keep-dup 1 -o HW3/Q2/tumorNoRedunant.bed
 
+# normal
+macs2 filterdup -i /n/stat115/2021/HW3/normal.bam -g hs --keep-dup 1 -o HW3/Q2/normalNoRedunant.bed
 ```
+
+Below is the screen shot is the macs2 process with % of reads are redundant for tumor samples. It is 17%.
+![Tumor % Redunant](Q2/tumorRedunant.png)
+
+Below is the screen shot is the macs2 process with % of reads are redundant for normal samples. It is 12%.
+![Normal % Redunant](Q2/normalRedunant.png)
+
+
+
+
+
+
+
+
+
+
 
 ### Question 3
 **For many ChIP-seq experiments, usually chromatin input without enriching for the factor of interest is generated as control. However, in this experiment, we only have ChIP (of both tumor and normal) and no control samples. Without control, MACS2 will use the non-peak read signals around the peaks to infer the chromatin background and estimate the ChIP enrichment over background. In ChIP-seq, + strand reads and – strand reads are distributed to the left and right of the binding site, respectively, and the distance between the + strand reads and – strand reads can be used to estimate the fragment length from sonication (note: with PE seq, insert size could be directly estimated). Use MACS2 to call peaks from tumor1 and normal1 separately. How many peaks do you get from each condition with FDR < 0.05 and fold change > 5? What is the estimated fragment size in each?**
 
+\textbf{Answer}: I use Lab 5 for reference for bash commands. I perform analysis on the bed files from Q2 (as per slack instruction). I got 28504 peaks for tumor samples and 11807 peaks for normal samples using `wc -l` on the resulting xls file.  The estimated fragment size for tumor samples is XXX and for normal samples is XXX. 
+
 ```{r, engine='bash', eval=FALSE}
 # your bash code here
-#Answer
+# make work directory
+mkdir HW3/Q3
+
+# loading in relevant modules
+module load centos6/0.0.1-fasrc01
+module load macs2/2.1.2_dev-fasrc01
+
+# tumor 
+macs2 callpeak -t HW3/Q2/tumorNoRedunant.bed -f AUTO -g hs -q 0.05 --fe-cutoff 5 --outdir HW3/Q3 -n tumor
+
+# normal
+macs2 callpeak -t HW3/Q2/normalNoRedunant.bed -f AUTO -g hs -q 0.05 --fe-cutoff 5 --outdir HW3/Q3 -n normal
+
+# getting peak numbers
+wc -l HW3/Q3/tumor_peaks.xls        # 28504 peaks
+wc -l HW3/Q3/normal_peaks.xls       # 11807 peaks
 
 ```
+
+Below is the screen shot of macs2 results for tumor samples.
+![Tumor MACS2](Q3/tumorCallpeaks.png)
+
+Below is the screen shot of macs2 results for normal samples.
+![Normal MACS2](Q3/normalCallpeaks.png)
+
+
+
+
+
+
+
+
+
+
 
 ### Question 4
 **Now we want to see whether AR has differential binding sites between prostate tumors and normal prostates. MACS2 does have a function to call differential peaks between conditions, but requires both conditions to have input control. Since we don’t have input controls for these AR ChIP-seq, we will just run the AR tumor ChIP-seq over the AR normal ChIP-seq (pretend the latter to be input control) to find differential peaks. How many peaks do you get with FDR < 0.01 and fold change > 6? **
 
+
+\textbf{Answer}: I use Lab 5 for reference for bash commands. As per lab, I will use normal sample as control. I perform analysis on the bed files from Q2 (as per slack instruction). There were 10156 peaks, found using `wc -l` on the resulting xls file.
+
 ```{r, engine='bash', eval=FALSE}
 # your bash code here
-#Answer
+# make work directory
+mkdir HW3/Q4
 
+# loading in relevant modules
+module load centos6/0.0.1-fasrc01
+module load macs2/2.1.2_dev-fasrc01
+
+# macs2 analysis (treatment: tumor) (control: normal)
+macs2 callpeak -t HW3/Q2/tumorNoRedunant.bed -c HW3/Q2/normalNoRedunant.bed -f AUTO -g hs -q 0.01 --fe-cutoff 6 --outdir HW3/Q4 -n q4 
+
+# getting peak numbers
+wc -l HW3/Q4/q4_peaks.xls        # 10156 peaks
 ```
+
+Below is the screen shot of macs2 results for Q4.
+![Q4 MACS2](Q4/q4Callpeaks.png)
+
+
+
+
+
 
 ## Part II. ChIP-seq quality control
 
@@ -71,30 +192,58 @@ The test samples are stored as **/n/stat115/2021/HW3/tumor.bam** and **/n/stat11
 
 Hint: Check out Options next to the Search function. 
 
-your answer
-```{r, engine='bash', eval=FALSE}
-#Answer
-#Insert the screenshot
+\textbf{Answer}: Yes, there are over 100 AR ChIP-seq samples which passed all QC measures in human prostate tissues.
 
-```
+Below is the screen shot of cistrome database with species set to homo sapeins, biological sources set to prostate, factors set to AR, and subset set to samples passing all quality control. There were 9 pages of results, with each page have 20 samples; thus we're clearly over 100 AR ChIP-seq samples that pass all QC measures.
+![Cistrome Filters](Q5/cistrome1.png)
+
 
 ### Question 6
 **Doing transcription factor ChIP-seq in tissues could be a tricky experiment, so sometimes even published data in high profile journals have bad quality. Look at a few AR ChIP-seq samples in the prostate tissue on Cistrome and inspect their QC reports. Can you comment on what QC measures tell you whether a ChIP-seq is of good or bad quality? Include a screen shot of a good AR ChIP-seq vs a bad AR ChIP-seq. **
 
-your answer
-```{r, engine='bash', eval=FALSE}
-#Answer
-#Insert the screenshot
-```
+\textbf{Answer}: There are six measures of quality control on Cistrome. I found the documentation for quality metrics here (http://cistrome.org/chilin/_downloads/instructions.pdf)
+1. Sequence Quality: Raw sequence median quality score and raw read GC contents. The method is via FastQC software. A good sequence quality score is $\geq 25$.
+2. Mapping Quality: Uniquely mapped ratio. It aligns reads onto user-specified genomes. Then, it filters the SAM files. The uniquely mapped RATIO is the uniquely mapped reads divided by the total reads. A good uniquely mapped ratio is $\geq 60%$.
+3. Library Complexity: PCR bottleneck coefficient (PBC). A good PBC score is $\geq 80%$.
+4. ChIP enrichment: Sufficient number of peaks (above 500) with good enrichment (10 fold change). This depends on experiement.
+5. Signal to Noise Ratio: Fraction of reads in peaks (FRiP). A good FRiP score is $\geq 1%$.
+6. Regulatory Region: DNase-seq union hypersensitive sites' (DHS) overlapped ratio in top 5000 peaks. This is expected to be $\geq 70%$.
+
+Browsing several pages of results, I noticed that quality condition #1 (Sequence Quality) and #6 (Regulatory Region) are usually satisfied. Thus, I imagine these are the baseline quality metrics and that we've gotten good at meeting these standards. I would expect at bare minimum for samples to pass these metrics before using them for research.
+
+The other four quality conditions are usually the metrics that get flagged red. I imagine they may be more difficult to attain in samples as often. Hence I would treat samples that met most of these four to be of high quality. 
+
+As an aside, something surprising I noticed is that quality condition #2 (Mapping Quality) was often flagged as not met even though it aligns based on user-specified genomes - this means that researchers are being honest about their data even if it means that they don't pass that quality control (demonstrates academic integrity).
+
+Below is a screen shot of Cistrome with varies quality controls met.
+![Cistrome Results](Q6/q6.1.png)
+
+
+Below is the screen shot of Cistrome database with a good quality.
+![Cistrome Good](Q6/good.png)
+Below is the screen shot of Cistrome database with a bad quality.
+![Cistrome Bad](Q6/bad.png)
+
+Something I noticed is that good sources often were part of very narrow research questions. The good quality example was looking specific at one pioneer factor GATA2 whereas the bad quality example was looking many things, androgen receptors, polycomb, and TMPRSS2-ERG gene fusion. Perhaps too much breadth might reduce deliberate labwork, and produce lower quality (Caveat: I know very little bio so I may misinterpreting the citation sentence).
+
 
 ### Question 7 **For Graduate Students Only**
 **Antibody is one important factor influencing the quality of a ChIP-seq experiment. Click on the GEO (GSM) ID of some good quality vs bad quality ChIP-seq data, and see where they got their AR antibodies. If you plan to do an AR ChIP-seq experiment, which company and catalog # would you use to order the AR antibody? **
 
-your answer
-```{r, engine='bash', eval=FALSE}
-#Answer
+\textbf{Answer}: I compiled a small table of 10 examples and their characteristics (I visited more but I didn't want to cram too much into the table). Something I noticed was that all the bad samples were from Santa Cruz Biotechnology. However there were also good samples made from them too - thus I would deem Santa Cruz Biotechnology as not always reliable. The other two companies I saw were Abcam and Millipore - I only found examples were they passed all the quality control metrics (randomly clicked 3-4 samples from 10 pages of results). Thus I would prefer to order from those two. (Caveat: I realized in my analysis that many of the examples were from Santa Cruz [I assume it because it's cheaper], so my results on Abcam and Millipore maybe limited since I saw fewer examples of them).
 
-```
+In terms of catalog numbers, it seems that Millipore catalog number 06-680 and Abcam catalog number 74272 are ideal sources for AR ChIP-seq experiment.
+
+![Cistrome Table](Q7/table.png)
+
+Below is the screen shot of characteristics from a good quality example.
+![Cistrome Bad](Q7/good.png)
+
+Below is the screen shot of characteristics from a bad quality example.
+![Cistrome Bad](Q7/bad.png)
+
+
+
 
 ## Part III ChIP-seq motif finding
 
@@ -106,12 +255,16 @@ MEME: http://meme-suite.org/tools/meme-chip
 Weeder: http://159.149.160.88/pscan_chip_dev/   
 Cistrome: http://cistrome.org/ap/root (Register a free account).  
 
-your answer
-```{r, engine='bash', eval=FALSE}
-#Answer
-#Insert the screenshot
+\textbf{Answer}: I used Weeder for this problem. For Weeder, I need the bed file from my analysis in Q4 (verified on Slack); thus I `scp` the q4_summits.bed to my local machine for upload onto Weeder. I kept the default settings but changed assembly to `hg38`. The output list already ranked by the global $p$-value (the higher it is, the more enriched it is).
 
+```{r, engine='bash', eval=FALSE}
+# transfer mapping to local directory (on local terminal)
+scp stat215u2107@login.rc.fas.harvard.edu:HW3/Q4/q4_summits.bed "q4_summits.bed"
 ```
+
+Below is screen shot of my Weeder results.
+
+
 
 ### Question 9
 **Look at the AR binding distribution in Cistrome DB from a few good AR ChIP-seq data in prostate. Does AR bind mostly in the gene promoters, exons, introns, or intergenic regions? Also, look at the QC motifs to see what motifs are enriched in the ChIP-seq peaks. Do you see similar motifs here as those you found in your motif analyses? **
