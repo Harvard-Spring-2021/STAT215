@@ -63,11 +63,11 @@ Below is the screen shot of the bwa command. According Jiazhen on Slack: "If you
 
 ![BWA Output](Q1/bwaOutput.png)
 
-Below is the screen shot of the flagstat (number of total reads and successfully mapped reads). From this, we conclude that the proportion of the reads that are successfully mapped is XXXX.
+Below is the screen shot of the flagstat (number of total reads and successfully mapped reads). From this, we conclude that the number of the reads that are successfully mapped is 961533 out of the total read of 1000010, so the proportion of the reads that are successfully mapped is 0.9615234.
 
 ![Samtool Summary](Q1/flagstat.png)
 
-Below is the screen shot of the flagstat (number of uniquely mapped reads). From this, we conclude that the proportion of the reads that are successfully mapped is XXXX.
+Below is the screen shot of the flagstat (number of uniquely mapped reads). From this, we see the number of unique read is 855308 out of a total of 1000010 reads, thus we can conclude that the proportion of the reads that are successfully mapped is 0.8552994.
 
 ![Samtool Unique Summary](Q1/flagstatUnique.png)
 
@@ -487,7 +487,7 @@ Below is a screen shot of my results from DAVID for alone (1).
 
 Below is a screen shot of a Functional Annotation Chart from my results from DAVID for alone (1).
 
-![DAVID Functional Annotation Chart](Q13/alonechart.png)
+![DAVID Functional Annotation Chart Alone](Q13/alonechart.png)
 
 (2) The AR target genes by overlapping AR binding with differential expression. I use `R` to get the list of genes for DAVID into a text file.
 ```{r}
@@ -503,7 +503,16 @@ Below is a screen shot of my results from DAVID for overlap (2).
 
 Below is a screen shot of a Functional Annotation Chart from my results from DAVID for overlap (2).
 
-![DAVID Functional Annotation Chart](Q13/overlapchart.png)
+![DAVID Functional Annotation Chart Overlap](Q13/overlapchart.png)
+
+I searched for enriched GO terms or pathways, and found many with low $p$-values however the FDR was not $< 0.05$. Thus these can be enriched GO terms or pathways, but not there's doubt since we don't have low enough FDR.
+
+
+
+
+
+
+
 
 
 
@@ -519,65 +528,225 @@ Hints:
 2) Basically this approach assumes that there are stronger AR targets (e.g. those genes with many AR binding sites within 100KB and have stronger differential expression) and weaker AR targets, instead of a binary Yes / No AR targets. 
 
 
-\textbf{Answer}:
-
-
+\textbf{Answer}: For this question, I need to (1) find the top 1500 genes (based on score) with the highest regulatory potentials and (2) find overlapping gene names in the top 1500 with the up-regulated genes in prostate cancer using the file from Q13 according to Lab 6. I again `scp` the necessary files and use `R` to make the gene lists. The I use DAVID and selected for Identifier OFFICIAL_GENE_SYMBOL.
 
 ```{r, engine='bash', eval=FALSE}
-#Code
-
-#Answer
-#Insert the screenshot
+# transfer regulatory potentials to local directory (on local terminal)
+scp stat215u2107@login.rc.fas.harvard.edu:/n/stat115/2021/HW3/AR_peaks_regulatory_potential.txt "Q14/AR_peaks_regulatory_potential.txt"
 ```
+
+(1) Finding the top 1500 genes with the highest regulatory potentials.
+```{r}
+potentials = read.delim("Q14/AR_peaks_regulatory_potential.txt")
+# sort by score
+potentials = potentials[order(potentials$score, decreasing = T),]
+top1500 = potentials[1:1500,]
+write(top1500$symbol, file = "Q14/top1500.txt")
+```
+
+Below is a screen shot of my results from DAVID for the top 1500 genes (1).
+
+![DAVID Top 1500 Genes](Q14/top1500.png)
+
+Below is a screen shot of a Functional Annotation Chart from my results from DAVID for the top 1500 genes (1).
+
+![DAVID Functional Annotation Chart Top 1500 Genes](Q14/top1500chart.png)
+
+
+
+
+
+
+(2) Finding the overlap between the top 1500 genes and the up regulated genes.
+```{r}
+overlap1500 = intersect(top1500$symbol, upregulated$geneName)
+write(overlap1500, file = "Q14/overlap1500.txt")
+```
+
+
+
+Below is a screen shot of my results from DAVID for the overlap between the top 1500 genes and the up regulated genes (2).
+
+![DAVID Overlap](Q14/overlap1500.png)
+
+Below is a screen shot of a Functional Annotation Chart from my results from DAVID for the overlap between the top 1500 genes and the up regulated genes (2).
+
+![DAVID Functional Annotation Chart Overlap](Q14/overlap1500chart.png)
+
+I searched for enriched GO terms or pathways, and found many with low $p$-values however the FDR was not $< 0.05$ for many of them. However unlike Q13, I did find an example where the FDR $< 0.05$, namely \textit{androgen receptor signaling pathway} under Gene_Ontology GOTERM_BP_DIRECT. For the top 1500 genes (1), I got an FDR value of 0.05 and then for the overlap genes (2), I got an FDR value of 3.72E-12 for \textit{androgen receptor signaling pathway} under Gene_Ontology GOTERM_BP_DIRECT.
+
+Unfortunately, my lack of biology is really showing so I can't relate these GO terms to prostate cancer specifically, however some Google searches seem to acknowledge what I've gotten above seems to relate with prostate cancer. It also makes senses that AR is enriched since that's our primary focus.
+
+
+
+
+
+
+
+
 
 ### Question 15 **For Graduate Students Only**
 **Comment on the AR targets you get from promoter binding (your code) and distance weighted binding. Which one gives you better function / pathway enrichment? Does considering differential expression help? **
 
-your answer
-```{r, engine='bash', eval=FALSE}
-#Answer
+\textbf{Answer}: I focused on the \textit{androgen receptor signaling pathway} under Gene_Ontology GOTERM_BP_DIRECT between all four David analyses to explore the effect (chose this because it is relevant to AR). In distance weight binding (with top 1500 genes) compared to the promoter bindings alone, I noticed the gene \textit{androgen receptor signaling pathway} was only present in the former set. Furthermore there were more chart records under the former as well for Gene_Ontology GOTERM_BP_DIRECT. Lastly the former had the presences of lower $p$-values under GOTERM_BP_DIRECT. This shows distance weighted binding works better.
 
-```
+I got similarly results when I used differential expression with unregulated genes. The gene \textit{androgen receptor signaling pathway} was only in the differential expression set of genes from Q14. The GOTERM_BP_DIRECT had more hits with lower $p$-values compared to it's counterpart in Q13.
+
+I think these results make sense because, as per lecture, most TF binding sites are outside promoters. Binding in promoter is difficulty because what metric - (how far, nearest distance, number of bindings, or some other knowledge). It's still an open question.
+
+Whereas distance weighted binding where the sum of binding sites are weighted by distance to TSS with exponential decay. The process generates ranks which provide information on on binding regulatory potential and expression. Thus, it make sense the empirical results agree and we get more results with lower $p$-scores and better FDR values (indicating enrichment in this method).
+
+
+
+
+
+
+
+
+
+
 
 ### Question 16
 **For what you did in Q12-15, Cistrome-GO (http://go.cistrome.org/) already provides a very simple solution. It performs functional enrichment analysis using a ChIP-seq peak file and an optional differential expression analysis file. Without differential expression, Cistrome-GO will perform GO analysis only on the regulatory potential. Now, use the differential peaks and upregulated genes to run Cistrome-GO and see the enriched biological functions or pathways. **
 
 Hint:  Please refer to https://academic.oup.com/nar/article/47/W1/W206/5485528
 
-your answer
-```{r, engine='bash', eval=FALSE}
-#Answer
-#Insert the screenshot
-```
+\textbf{Answer}: I used the website with Species set to Human (GRCh38/hg38), Peak Bed File the file from Q4, and the Differential Expression File from Q13 (up_regulated_genes).
+
+
+Below is a screen shot of my input into Cistrome-GO.
+
+![Cistrome Input](Q16/cistromeInput.png)
+
+Below is a screen shot of the ROC curve from Cistrome-GO under Association between differential expression and peaks. The ROC curve tells me that classifier had a difficult time since it's very close to the $x=y$ line.
+
+![Cistrome ROC](Q16/graph.png)
+
+Below is a screen shot of the Gene Rank by Rank Product from Cistrome-GO.
+
+![Cistrome Gene Rank](Q16/generank.png)
+
+
+Below is a screen shot of the KEGG pathway from Cistrome-GO.
+
+![Cistrome KEGG Pathway](Q16/kegg.png)
+
+Below is a screen shot of the GO Cellular Component from Cistrome-GO.
+
+![Cistrome GO Cellular Component](Q16/gocc.png)
+
+Below is a screen shot of the GO Molecular Function from Cistrome-GO.
+
+![Cistrome GO Molecular Function](Q16/gom.png)
+
+Below is a screen shot of the GO Biological Process from Cistrome-GO.
+
+![Cistrome GO Biological Process](Q16/gob.png)
+
+This tool agrees with my analysis from earlier. In my exploration on David, I had many more chart readings on the Functional Annotation Chart for Biological Process (GOTERM_BP) than for the other categories (Molecular Functions and Cellular Component). In Q15, I explored the \textit{androgen receptor signaling pathway} and saw that it appeared in the distance weighted binding with a very low $p$-value and reasonable FDR score - that holds true here as well. Just like in Q14-15, \textit{androgen receptor signaling pathway} has the lowest observed $p$-value and FDR value.
+
+
+
+
+
+
+
 
 ## PART VI. ATAC-seq
 
-**ATAC-seq, or Assay for Transposase-Accessible Chromatin coupled with next-gen sequencing, is a technique to characterize accessible chromatin regions in the genome. Suppose the molecular mechanism of prostate cancer development was poorly understood and we didn't know AR was important, then we would not know to do AR ChIP-seq to start with. In this case, ATAC-seq oculd be performed on the prostate cancer tissue without prior knowledge, and we could find the cancer drivers based on the ATAC-seq peaks. **
+**ATAC-seq, or Assay for Transposase-Accessible Chromatin coupled with next-gen sequencing, is a technique to characterize accessible chromatin regions in the genome. Suppose the molecular mechanism of prostate cancer development was poorly understood and we didn't know AR was important, then we would not know to do AR ChIP-seq to start with. In this case, ATAC-seq could be performed on the prostate cancer tissue without prior knowledge, and we could find the cancer drivers based on the ATAC-seq peaks. **
 
 **Unlike ChIP-seq which often uses chromatin input as controls, ATAC-seq has no control samples. MACS2 is  suited for calling differential ATAC-seq peaks between tumor and normal (similar to your AR differential peak calling in Q4). A second way is to first call the union peaks by combining reads from all the tumor and normal samples, the extract the read counts from each samples in the union peaks, and run DESeq2 to find differential peaks (as if each union peak is a gene in regular DESeq2 analysis). A third way is to call peaks in the tumor, then call peaks in the normal, and just simply do an overlap of the peaks between the two to find different peaks. SAMTools (http://samtools.sourceforge.net/) and BEDTools (https://bedtools.readthedocs.io/en/latest/) are extremely useful tools to manipulate SAM/BAM and BED files. **
 
 ### Question 18
-**We have found some published ATAC-seq data on prostate tumor and normal prostate tissues, and have done read mapping and the peak calls (MACS2) on each data seaprately. Use BEDTools to find peaks that are unique in the tumor and not in the normal (the 3rd approach). How many tumor-specific peaks (peaks in tumor but not in normal) do you get this way? Run this through Cistrome Toolkit and examine the results. What transcription fators are important in driving these prostate cancer-specific signals?**
+**We have found some published ATAC-seq data on prostate tumor and normal prostate tissues, and have done read mapping and the peak calls (MACS2) on each data separately. Use BEDTools to find peaks that are unique in the tumor and not in the normal (the 3rd approach). How many tumor-specific peaks (peaks in tumor but not in normal) do you get this way? Run this through Cistrome Toolkit and examine the results. What transcription factors are important in driving these prostate cancer-specific signals?**
 
 Hint: The peak files are **/n/stat115/2021/HW3/tumor_ATAC_peaks.bed** and **/n/stat115/2021/HW3/normal_ATAC_peaks.bed** in Cannon
 
-your answer
+\textbf{Answer}: I want to find the peaks in tumor that are not in normal. Read the `subtract` documentation, that's searching for features in normal (-b) that overlaps and removing that portion from tumor (-a). I also use the -A flag to completely remove a features with overlap. 
+
+Using `wc -l` on the resulting bed file, I get 13448 tumor-specific peaks (peaks in tumor but not in normal).
+
 ```{r, engine='bash', eval=FALSE}
-#Answer
-#Insert the screenshot
+# loading in relevant modules
+module load centos6/0.0.1-fasrc01
+module load bedtools/2.17.0-fasrc01
+
+# subtract tool
+bedtools subtract -a /n/stat115/2021/HW3/tumor_ATAC_peaks.bed -b /n/stat115/2021/HW3/normal_ATAC_peaks.bed -A | cut -f 1-3 > HW3/Q18/tumorSpecific.bed
+
+# getting peak numbers
+wc -l HW3/Q18/tumorSpecific.bed     # 13448 peaks
+
+# transfer bed file to local directory (on local terminal)
+scp stat215u2107@login.rc.fas.harvard.edu:HW3/Q18/tumorSpecific.bed "Q18/tumorSpecific.bed"
 ```
+
+Below is a screen shot of the Cistrome Toolkit Presets.
+
+![Cistrome Toolkit Presets](Q18/toolkitPresets.png)
+
+Below is a screen shot of the Cistrome Toolkit Results in table form.
+
+![Cistrome Toolkit Result Table](Q18/tableResults.png)
+
+Below is a screen shot of the Cistrome Toolkit Results in plot form. I listed the top motifs after AR.
+
+![Cistrome Toolkit Result Plot](Q18/plotResults.png)
+
+The results show that the top 5 motifs after AR are DNMT3A, FOXA1 (which appeared in other analyses in earlier questions), TP63, JARID2, and MLLT1. Hence these can be the transcription factors that are important in driving these prostate cancer-specific signals. It's interesting that with the exception of FOXA1, many are new TFs I have not encountered in the earlier analysis (thus they can identified as unique to the prostate cancer samples).
+
+
+
+
+
 
 ### Question 19 **For Graduate Students Only**
 
 **Now just take the top 10K ATAC-seq peaks (ranked by fold-change since these are all significant peaks already) in the prostate tumor only (not the differential peaks) and run Cistrome Toolkit. Compare the results with Q18. Can you comment on which approach gives you more meaning results?**
 
-your answer
+\textbf{Answer}: First I `scp` the ATAC-seq tumor data. Then I sort for the top 10K. Then I run Cistrome Toolkit analysis.
 ```{r, engine='bash', eval=FALSE}
-#Answer
-
-#Insert the screenshot
-
+# transfer bed file to local directory (on local terminal)
+scp stat215u2107@login.rc.fas.harvard.edu:/n/stat115/2021/HW3/tumor_ATAC_peaks.bed "Q19/tumor_ATAC_peaks.bed"
 ```
+
+Analysis to extract the top 10K TAC-seq peaks (ranked by fold-change). According to Jiazhen on Slack: "for MACS peak calling outputs, fold change will be within the .narrowPeak file. But since we are not providing that file to you, you can use the integer score for display (last column)."
+```{r}
+ATACtumor = read.delim("Q19/tumor_ATAC_peaks.bed", header = F)
+colnames(ATACtumor) = c("chr", "start", "end", "peak", "score")
+# sort and subset the top 10K
+ATACtumor = ATACtumor[order(ATACtumor$score, decreasing = T),]
+top10K = ATACtumor[1:10000,]
+write.table(top10K[,c(1:3)], file = "Q19/top10K.bed",
+            row.names = F,
+            col.names = F,
+            sep = "\t")
+```
+
+
+Below is a screen shot of the Cistrome Toolkit Presets.
+
+![Cistrome Toolkit Presets](Q19/toolkitPresets.png)
+
+Below is a screen shot of the Cistrome Toolkit Results in table form.
+
+![Cistrome Toolkit Result Table](Q19/tableResults.png)
+
+Below is a screen shot of the Cistrome Toolkit Results in plot form. I listed the top motifs after AR.
+
+![Cistrome Toolkit Result Plot](Q19/plotResults.png)
+
+The results show that the top 5 motifs are SP1, POLR2A, MED1, PHF8, and CDK9. These results are very different from those in Q18; none of these top motifs appeared anywhere else in my analysis. My guess (with my limited biology) is that doing just the top 10K ATAC-seq peaks in the tumor sample detects the peaks that are general, whereas the analysis in Q18 removes overlaps between it and the normal sample so it highlights the different peaks that are most relevant for the cancer. Thus I would argue that the approach using `bedtool subtract` in Q18 provides more meaningful results.
+
+
+
+
+
+
+
+
+
 
 ### Question 20
 **Sometimes even without ATAC-seq, we can predict the driving transcription factors based on deferentially expressed genes by using public ChIP-seq data. Even if the public TF ChIP-seq data was generated on different cells, they still provide some insights on the TF putative targets. Based on the differential gene expression list, Lisa first tries to build an epigenetic model using public ChIP-seq and chromatin accessibility profiles, then uses public ChIP-seq data to see which TF ChIP-seq fits the chromatin model the best. Now run the up-regulated gene in prostate cancer on Lisa, and see what transcription factors were predicted as putative drivers for these differential genes? **
@@ -595,6 +764,23 @@ your answer
 #Answer
 
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ## Summary: With HW3, we hope you can see the value of TF motif, TF ChIP-seq, and chromatin accessibility profiles in understanding gene regulation or differential gene expression. We also hope you to appreciate the value of using publicly available data and integration resources in Cistrome to inform your own research explorations. 
 
