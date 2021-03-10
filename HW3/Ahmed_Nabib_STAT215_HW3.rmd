@@ -755,21 +755,42 @@ Hint:
 1). Please refer to https://genomebiology.biomedcentral.com/articles/10.1186/s13059-020-1934-6.
 2). You can use Lisa on http://lisa.cistrome.org/, but it was not designed for a hundred students to submit jobs in one day. We have a newer command line version Lisa2 (https://github.com/liulab-dfci/lisa2), which is installed on Cannon and might save you time from waiting for the web server (actually Lisa2 also runs much faster). 
 
-your answer
+**Answer**: I use the reference code from Lab 6. I filter for the gene names from the up-regulated gene list in prostate cancer provided to us. Then I use that to run Lisa. In slack, Jiazhen said: "just a screenshot of the output file's content is fine." 
+
+`R` code to extract only the gene names.
+```{r}
+upregulated = read.delim("Q13/up_regulated_genes_in_prostate_cancer.txt")
+write(upregulated$geneName, file = "Q20/up_regulated_genes_names.txt")
+```
+
 ```{r, engine='bash', eval=FALSE}
-#Command line
+# transfer txt file to cluster (on local terminal)
+scp Q20/up_regulated_genes_names.txt stat215u2107@login.rc.fas.harvard.edu:HW3/Q20
 
-#Figure
+# loading the modules
+module load Anaconda/5.0.1-fasrc02
 
-#Answer
+# use pre-installed lisa2 & activate environment
+source /n/stat115/2021/HW5/miniconda3/bin/activate
+conda activate lisa2
 
+# lisa command
+lisa oneshot hg38 HW3/Q20/up_regulated_genes_names.txt -b 300 --seed=2556 --save_metadata > HW3/Q20/lisa.txt
+
+# print top lines of file content
+head -15 HW3/Q20/lisa.txt
 ```
 
 
+Below is a screen shot of the Lisa results. I listed the top motifs after AR. I notice they are sorted by the last column (summary_p_value), and I observe the factors: CWR22Pc, VCaP, and LNCaP. 
 
+![Cistrome Toolkit Result Plot](Q20/lisa.png)
 
+Doing some research online, I find: "The human prostate cancer cell line CWR22Pc established from the primary CWR22 tumors provides several valuable advantages as a model system for androgen-regulated growth and development of androgen-independence of prostate cancer cells" (Source: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2570751/#:~:text=The%20human%20prostate%20cancer%20cell,independence%20of%20prostate%20cancer%20cells.)
 
+Similar, I found a paper on VCaP, a cell-based model system of human prostate cancer (https://pubmed.ncbi.nlm.nih.gov/11317522/) and that LNCaP cells are androgen-sensitive human prostate adenocarcinoma cells (https://pubmed.ncbi.nlm.nih.gov/10917202/).
 
+Thus the results of LISA are consistent with research and the fact this sample is studying prostate cancer.
 
 
 
