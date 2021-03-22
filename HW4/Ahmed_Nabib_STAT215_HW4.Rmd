@@ -1,0 +1,255 @@
+---
+title: "STAT 215 Homework 4"
+author: "Nabib Ahmed"
+date: "Due: Tuesday 03/23/2021 by 11:59 pm"
+output: html_document
+---
+
+# Part I. Chromatin Modification (3.5/5 pts)
+
+DNA methylation patterns are altered in many diseases, including cancer, which makes this epigenetic mark an attractive target for various studies. Genome-wide detection of 5mC by bisulfite sequencing is regarded as the current gold standard for DNA methylation detection. In the HW3, we have performed the gene regulation analysis on prostate cancer using transcription factor ChIP-seq data. To better understand the effect of methylation on gene expression, we can utilize BS-seq to detect the DNA methylation positions in the genome.
+
+
+**I.1 (3.5 pts) Reduced-representation bisulfite sequencing (RRBS-Seq) is a technique that uses one or multiple restriction enzymes on the genomic DNA to produce sequence-specific fragmentation. The fragmented genomic DNA is then treated with bisulfite and sequenced. RRBS-Seq is particularly effective on the sites with high methylation, such as in promoters and repeat regions. Given a subsampled RRBS-seq file(`data/bs_subreads.fastq`) in a prostate cancer cell line (LNCaP),  perform the reads mapping with bismarker(https://github.com/FelixKrueger/Bismark/tree/master/Docs). In this subsampled file, how many reads are unaligned and how many CpGs, CHGs, and CHHs are methylated?**
+
+<u>**Instructions:**</u>
+
+1. (0.5 pt) Make your own working directory in your local home folder. Download bismarker and 'install' it https://github.com/FelixKrueger/Bismark#installation. Note that the latest version is written in perl language, so execute the program by either `/absolute/path/to/the/bismark-*/file` or `perl bismark-*` under the corresponding folder.
+
+``` {bash eval=FALSE}
+# YOUR BASH SCRIPTS HERE
+
+```
+
+2.  Prepare the genome for Bismark. You can start by copying the hg38 from `/n/stat115/2021/HW1/index/hg38_raw/` to your local machine and build from there (1.5 pt graduate students only). One of the main jobs is to conduct the C-T or G-A conversion. Why are we doing this? (0.5 pt, all students)
+
+```{bash eval=FALSE}
+# YOUR BASH SCRIPTS HERE
+
+```
+
+```
+# YOUR GENOME PREPARATION LOG HERE
+
+```
+
+3. (1 pt) Now that we prepared the genome for the question, follow the Bismark docs to run the main bismark functions, then deduplicate and extract the methylations. For undergraduate students, use directly the converted genome `/n/stat115/2021/HW4/p1_data/hg38/` or here `/n/home13/stat115u2102/hw4/setup/hg38_p1/`. What do you see from `perl bismark2report`?
+
+``` {bash eval=FALSE}
+# YOUR BASH SCRIPTS HERE
+
+```
+
+```
+# YOUR REPORT LOG HERE
+
+
+
+```
+
+**I.2 (1.5 pts) Methylation in cytosine at promoter regions normally suppresses the gene expression, while H3K4me3 and H3K27ac histone modifications at promoter regions imply higher gene expression. We have processed RRBS-seq data on the prostater cancer cell line dataset(https://www.encodeproject.org/experiments/ENCSR859PDD/) and report the high methylation signal sites in `data/Methylation.bed`. Draw violin plots of the expression level of genes with methylation, H3K4me3, and H3K27ac in their promoters. Could you find that the higher methylation signals repress the gene expression?**  
+
+The `/n/stat115/2021/HW4/p1_data/ProstateCancer_H3K4me3_peaks.bed` and `/n/stat115/2021/HW4/p1_data/ProstateCancer_H3K27ac_peaks.bed` are the H3K4me3 and H3K27ac peaks files of prostate cancer. Try to find the intersection of loops and histone modification signal intervals. In the `/n/stat115/2021/HW4/p1_data/Expr_loc.txt`, the first three columns are chromosome coordinates, the fourth column is the gene expression score of a prostate cancer tissue, and the rest columns are the gene symbols.
+
+**Hint1:** Use the preinstalled `bedtools` by calling `module load bedtools2`.
+
+**Hint2:** Use `>` to write your results into an output file. Use `uniq` command to remove the duplicates from your intersections. e.g. `bedtools intersect {YOUR FLAGS} | uniq > OUTPUT.TXT`
+
+**Hint3:** The methylation group might have a lower signal-noise ratio. So drop the genes with very low expression (< 0.0001) and use the log scale when you generate the violin plots for better visualization. You can use `ylim` and `scale_y_log10` from `ggplot`.
+
+```{bash eval=FALSE}
+# YOUR BASH SCRIPTS HERE
+
+```
+
+```{r}
+# YOUR PLOTTING SCRIPTS AND RESULTS HERE
+
+```
+
+# Part II. HiC (5/6 pts)
+
+Genome architecture plays a key role in nuclear functions. The spatial arrangement and proximity of genes have been linked to biological functions, such as gene replication, regulation, and transcription. The Hi-C technique allows researchers to extract the interaction frequency for all loci of a genome at high-throughput and at a genome-wide scale. In this part, we will learn how the HiC data integrates with other epigenetic data and genome architecture affects gene expression in prostate cancer.
+
+**II.1 (2 pts) Given subsampled example fastq files generated by Hi-C technique(`/n/stat115/2021/HW4/p2_data/HiC_fq`), perform reads mapping, filtering, and binning to this data with runHiC(http://xiaotaowang.github.io/HiC_pipeline/quickstart.html). How about the quality of this subsampled data? Could you explain the QC criteria of Hi-C data?**
+
+<u>**Instructions:**</u>
+
+1. First load the prepared anaconda environment. Make sure use exactly the same version for python and the dependencies. Note the difference from doing the same on local machines, e.g. a laptop or PC.
+```{bash eval=FALSE}
+module load Anaconda3 python/3.7.7-fasrc01
+conda activate /n/stat115/2021/HW4/conda_env37
+module load samtools minimap2 bwa sratoolkit
+```
+
+2. [Optional] The runHiC script takes the bwa index as the input. You can either use the one we used for HW3 `/n/stat115/2021/HW3/bwa_hg38_index` or build your own index separately.
+
+3. Note that the index file is **NOT*** the same as the one we used for bismark. What is the main difference between bowtie and bwa in practice? (Hint: https://www.biostars.org/p/134418/). Copy the index to your local dir and build the index.
+
+```
+# YOUR ANSWER HERE
+
+```
+
+4. Prepare your working directory with the index files and your metadata file `datasets.tsv`. See http://xiaotaowang.github.io/HiC_pipeline/quickstart.html#create-the-meta-data-file. In our case we would use these following setup configuration. Make sure you have more than one replica sample in your metadata to avoid future ambiguity. If you skipped step 2, copy the prepared index file `/n/stat115/2021/HW4/p2_data/hg38` or `/n/home13/stat115u2102/hw4/setup/hg38_p2` to your wdr directly. Also download `hg38.chrom.sizes` from canvas to your wdr.
+
+```
+HiC_subreads GM06990 R1 HindIII
+HiC_subreads GM06990 R2 HindIII
+```
+
+5. Check your wdr, which should have at least the following folders.
+```
+.
+├── hg38
+│   ├── hg38.fa
+│   ├── hg38.fa.amb
+│   ├── hg38.fa.ann
+│   ├── hg38.fa.bwt
+│   ├── hg38.fa.fai
+│   ├── hg38.fa.pac
+│   └── hg38.fa.sa
+├── HiC_subreads
+│   ├── HiC_subreads
+│   ├── HiC_subreads_1.fastq
+│   ├── HiC_subreads_2.fastq
+│   └── HiC_subreads.completed
+├── hg38.chrom.sizes
+└── datasets.tsv
+```
+Run the runHiC commands and generate the stats table. Put here the output `*.stats` and plots `*.png` for the summary group `allReps` **ONLY**. What is the message you can read from the results.
+
+
+``` {bash eval=FALSE}
+# YOUR BASH SCRIPTS HERE
+
+
+```
+
+
+```
+# YOUR STATS TABLE HERE
+
+
+```
+
+**II.2 (2 pts) In the II.1, you have learned how to generate a genomic interaction matrix on the example file. Here we provided a genomic interaction data on chr21 in prostate cancer(`data/chr21.chr21_10000.cool`). Normalize this data at 10k resolution and perform loop calling with 10% CTCF model. How many loops with >0.9 confidence can you find? Then draw a genomic contact heatmap to show the interaction in chr21. Are there any highly interactive regions?**
+
+**Hint:** cooler(https://cooler.readthedocs.io/en/latest/) can perform normalization and peakachu(https://github.com/tariks/peakachu) can perform loop calling on Hi-C data. higlass(https://higlass.io/) may help with visualization.
+
+```{bash eval=FALSE}
+# YOUR BASH SCRIPTS HERE
+
+
+```
+
+```{}
+# YOUR HIGLASS CODES HERE
+
+```
+
+
+**II.3 (1 pt) Transcription factors help construct the chromatin loops. With the provided prostate cancer ATAC-seq peaks file(`data/tumor_ATAC_peaks.bed`), could you find the open regions in the loop anchors? What factors bind in the loop anchors? What potential roles may these factors play?**
+
+```{bash eval=FALSE}
+# YOUR BASH SCRIPTS HERE
+
+```
+
+
+**II.4 (1 pt, graduates only) Normally histone modification H3K27ac marks the enhancer regions on the genome, and H3K4me3 marks the promoter regions. Use the prostate tumor H3K27ac and H3K4me3 peaks files in I.2 here. Based on the loop file, could you find the loops that contact an enhancer region with a gene promoter region on chr21? Do these target genes express higher than the genes without loops structure?**
+
+
+```{bash eval=FALSE}
+# YOUR BASH SCRIPTS HERE
+
+```
+
+```{r}
+# YOUR R SCRIPTS HERE
+
+```
+
+
+# Part III. Hidden Markov Model and TAD boundaries (2 pts)
+
+Topologically associating domains (TADs) define genomic intervals, where sequences within a TAD physically interact more frequently with each other than with sequences outside the TAD. TADs are often defined by HiC (https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3149993/), an experimental technique designed to study the three-dimensional architecture of genomes. HiC generates PE sequenced data, where the two mate pairs indicate two genomic regions that are might be far apart in the genome, but physically interact with each other. If we look across the genome in bins (40kb in the early paper, but now can go down to 5-10kb with deeper sequencing), we could find reads that are mapped there and check whether their interacting mate pairs are mapped upstream or downstream. In each bin, we can calculate a directional index (DI) to quantify the degree of upstream or downstream bias of a given bin (for more details, see the supplement- `Supplement_10.1038_nature11082.pdf` ). For this HW, we ask you to implement a hidden Markov Model (Viterbi) to find regions with upstream bias (DI < 0) and those with downstream bias (DI > 0), even though the DI in individual bins might have some noise. This way, TAD boundaries could be discovered as clusters of bins from negative DIs to positive DIs (see Supplementary Figure 12b).
+
+For simplicity, we will only have two hidden states (upstream, downstream), and use the following HMM parameters (these do not necessarily capture the real data distribution, but just to help your implementation):
+
+```
+Initial probability: upstream = 0.5, downstream = 0.5
+Transition probability: Pb(up to up) = Pb(dn to dn) = 0.9, Pb(up to dn) = Pb(dn to up) = 0.1
+
+Emission probabilities:
+P{<-1200, [-1200,-800), [-800,-500), [-500,0), [0,500), [-500,800), [800, 1200), >= 1200 | upstream} = (0.01, 0.01, 0.02, 0.04, 0.65, 0.15, 0.08, 0.04)
+P{<-1200, [-1200,-800), [-800,-500), [-500,0), [0,500), [-500,800), [800, 1200), >= 1200 | downstream} = (0.04, 0.08, 0.15, 0.65, 0.04, 0.02, 0.01, 0.01)
+
+```
+
+**Given the DI file (`data/ESC.Dixon_2015.DI.chr21.txt`), implement and utilize the Viterbi algorithm to predict the hidden states of the Hi-C data. Visualize your result with a graph utilizing the following: midpoint of genomic bin on the x-axis; DI score per bin on the y-axis; color: hidden state of the HMM.**  
+
+**Hint1**: Examples HMM code can be found at:
+http://www.adeveloperdiary.com/data-science/machine-learning/implement-viterbi-algorithm-in-hidden-markov-model-using-python-and-r/
+
+**Hint2**: The observations are continuous or have too many discrete values. Try binning them into a few discrete regions. Use `cut` function built in R.
+
+```{r}
+# YOUR SCRIPTS HERE
+
+```
+
+
+# Part IV: GWAS Followup (3 pts)
+
+The NHGRI-EBI GWAS Catalog is a curated dataset of trait-associated genetic variants for human. While it provides association between single-nucleotide polymorphisms (SNPs) and trait (i.e. cancer), the genetic variants in GWAS catalog are not necessarily causative or functional for a trait, since SNPs can be highly correlated measured by linkage disequilibrium (LD). To learn the potential functional effect of a certain SNP, especially the non-coding variants, we can use RegulomeDB to explore the potential function of the SNP.
+
+You will explore the following online resources: The NHGRI-EBI GWAS catalog (https://www.ebi.ac.uk/gwas/), dbSNP (https://www.ncbi.nlm.nih.gov/snp/ ), LDLink (https://ldlink.nci.nih.gov/), and RegulomeDB (the beta version http://regulomedb.org or the more stable older version http://legacy.regulomedb.org/).
+
+**IV.1 Explore whether there are genetic variants within the gene BRCA2 which are associated with any traits. What traits are associated with the BRCA2 variants? Which SNP has the smallest p-value related to breast cancer? What is the risk allele?**  
+
+```
+# YOUR ANSWER HERE
+
+
+```
+
+**IV.2 For the BRCA2 SNP with the most significant association with breast cancer, what consequence does the risk allele have on the BRCA2 protein sequence? Based on 1000 Genomes in LDLink, what is the allele frequency of the risk allele among the 5 ethnicities In the population with the highest risk in the resource, what is the expected number of people with heterozygous genotype at this SNP, assuming linkage disequilibrium?**  
+
+```
+# YOUR ANSWER HERE
+
+
+```
+
+**IV.3 Explore a certain SNP, rs4784227, that was reported to be associated with breast cancer. Is it an intergenic, exonic or intronic variant? What gene does it fall in?**  
+
+```
+# YOUR ANSWER HERE
+
+
+```
+
+**IV.4 Explore the SNP rs4784227 in RegulomeDB. What functional category does the rank score (or Regulome DB Score) implicate? What factors does RegulomeDB take into consideration while scoring the potential function of SNPs?**
+
+```
+# YOUR ANSWER HERE
+
+
+```
+
+**IV.5 Describe the evidence that implicates the regulatory potential of rs4784227, for example, list several transcription factors with binding peaks overlapping this SNP; report the cell types with open chromatin regions overlapping this SNP.**
+
+```
+# YOUR ANSWER HERE
+
+
+```
+
+**IV.6 [Graduate Students] Read the paper by Cowper-Sal et al. (PMID 23001124) and summarize the potential mechanisms of the above SNP’s function in terms of affecting transcription factor-DNA interaction and regulating genes.**
+
+```
+# YOUR ANSWER HERE
+
+
+```
