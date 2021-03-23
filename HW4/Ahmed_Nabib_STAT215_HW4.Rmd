@@ -16,38 +16,108 @@ DNA methylation patterns are altered in many diseases, including cancer, which m
 
 1. (0.5 pt) Make your own working directory in your local home folder. Download bismarker and 'install' it https://github.com/FelixKrueger/Bismark#installation. Note that the latest version is written in perl language, so execute the program by either `/absolute/path/to/the/bismark-*/file` or `perl bismark-*` under the corresponding folder.
 
+\textbf{Answer}: Used lab instructions found here: [Link](https://github.com/stat115/Lab_2021/blob/main/Lab07/How%20to%20install%20Bismark.pdf).
+
 ``` {bash eval=FALSE}
 # YOUR BASH SCRIPTS HERE
+# setup environment
+module load bowtie2/2.3.2-fasrc02 hisat2/2.1.0-fasrc01  samtools/1.5-fasrc02
 
+# moving into dedicated HW4 file on server
+mkdir HW4
+cd HW4
+
+# get Bismark release files
+wget https://github.com/FelixKrueger/Bismark/archive/refs/tags/0.23.0.zip
+
+# unzip files
+unzip 0.23.0.zip
 ```
+
+
+
+
 
 2.  Prepare the genome for Bismark. You can start by copying the hg38 from `/n/stat115/2021/HW1/index/hg38_raw/` to your local machine and build from there (1.5 pt graduate students only). One of the main jobs is to conduct the C-T or G-A conversion. Why are we doing this? (0.5 pt, all students)
 
+\textbf{Answer}: First I copy the `hg38` to my local directory. Then I set up cluster computing node. Then I use `bismark_genome_preparation` from Bismark to prepare the genome using documentation from [here](https://github.com/FelixKrueger/Bismark/tree/master/Docs). The reason for conducting the C-T and G-A conversion is because it provides an appropriate reference genome. The reason for this section (Part I) is because when we do this analysis on a sample, we change the sequence so using the standard human genome wouldn't work when we go to do alignment - in this part, we resolve this issue by making a conversion of our background genome so we have something to do our mapping/realignment. This helps with our goal of identifying the regions that are protected by methylation - this lets know where the methylation events are.
+
 ```{bash eval=FALSE}
 # YOUR BASH SCRIPTS HERE
+# copy the hg38 file
+cp -r /n/stat115/2021/HW1/index/hg38_raw/ HW4/Q2/
 
+# transitioning from the login node to the computing node
+srun --nodes=1 --ntasks-per-node=1 --mem=64G --cpus-per-task=8 --time=06:00:00 --pty bash -i
+
+# run bismark_genome_preparation
+../Bismark-0.23.0/bismark_genome_preparation hg38_raw
 ```
 
-```
-# YOUR GENOME PREPARATION LOG HERE
 
-```
+Attached is the output on the console from `bismark_genome_preparation`
+
+![Bismark Genome Preparation Output](QI.1.2/log.png)
+
 
 3. (1 pt) Now that we prepared the genome for the question, follow the Bismark docs to run the main bismark functions, then deduplicate and extract the methylations. For undergraduate students, use directly the converted genome `/n/stat115/2021/HW4/p1_data/hg38/` or here `/n/home13/stat115u2102/hw4/setup/hg38_p1/`. What do you see from `perl bismark2report`?
 
+\textbf{Answer}: I follow the documentation provided in the slide. As per TA Jiazhen Rong's Slack message responding to whether graduate students can use the converted genome: "Yes you definitely could use the pre-converted genome since I.1.3. But still need to report some important lines of I.1.2's log message after bismark converting step finishes running," I will use the pre-converted genome for this question due to the time needed for I.1.2 to complete. 
+
 ``` {bash eval=FALSE}
 # YOUR BASH SCRIPTS HERE
+# running bismark
+perl ../Bismark-0.23.0/bismark --genome /n/stat115/2021/HW4/p1_data/hg38/ /n/stat115/2021/HW4/p1_data/bs_subreads.fastq
 
+# running deduplicate
+perl ../Bismark-0.23.0/deduplicate_bismark --bam bs_subreads_bismark_bt2.bam
+
+# extract the methylations
+perl ../Bismark-0.23.0/bismark_methylation_extractor --gzip --bedGraph bs_subreads_bismark_bt2.deduplicated.bam
+
+# generating report
+perl ../Bismark-0.23.0/bismark2report
+
+# print outputs
+cat bs_subreads_bismark_bt2_SE_report.txt
+cat bs_subreads_bismark_bt2.deduplication_report.txt
+
+# moving generated HTML to local drive
+scp stat215u2107@login.rc.fas.harvard.edu:HW4/Q3/bs_subreads_bismark_bt2_SE_report.html "QI.1.3/report.html"
 ```
 
-```
-# YOUR REPORT LOG HERE
+
+From the bismark2report, I get the following `bs_subreads_bismark_bt2_SE_report.txt`, `bs_subreads_bismark_bt2.deduplication_report.txt`, and generated HTML output. As per Bo Yuan's Slack message, I attach screen shots of my results.
+
+![bs_subreads_bismark_bt2_SE_report.txt](QI.1.3/SE_report.png)
+
+
+![bs_subreads_bismark_bt2.deduplication_report.txt](QI.1.3/deduplication_report.png)
+
+
+![Alignment Stats](QI.1.3/alignment.png)
+
+
+![Cytosine Methylation](QI.1.3/cytosine.png)
+
+
+![Alignment to Individual Bisulfite Strands](QI.1.3/alignment2.png)
+
+
+![Deduplication](QI.1.3/deduplication.png)
+
+
+![Cytosine Methylation after Extraction](QI.1.3/cytosine2.png)
+
+
+![M-Bias Plot](QI.1.3/mbias.png)
+
+
+I observe that only 9.12% of sequences did not map uniquely. The cytosine methylation is majority in CpG context (which is the region where "nucleotides are followed by a guanine nucleotide in the linear sequence of bases along its 5' → 3' direction"). There were very few duplicates removed in the deduplication process.
 
 
 
-```
-
-**I.2 (1.5 pts) Methylation in cytosine at promoter regions normally suppresses the gene expression, while H3K4me3 and H3K27ac histone modifications at promoter regions imply higher gene expression. We have processed RRBS-seq data on the prostater cancer cell line dataset(https://www.encodeproject.org/experiments/ENCSR859PDD/) and report the high methylation signal sites in `data/Methylation.bed`. Draw violin plots of the expression level of genes with methylation, H3K4me3, and H3K27ac in their promoters. Could you find that the higher methylation signals repress the gene expression?**  
+**I.2 (1.5 pts) Methylation in cytosine at promoter regions normally suppresses the gene expression, while H3K4me3 and H3K27ac histone modifications at promoter regions imply higher gene expression. We have processed RRBS-seq data on the prostater cancer cell line dataset (https://www.encodeproject.org/experiments/ENCSR859PDD/) and report the high methylation signal sites in `data/Methylation.bed`. Draw violin plots of the expression level of genes with methylation, H3K4me3, and H3K27ac in their promoters. Could you find that the higher methylation signals repress the gene expression?**  
 
 The `/n/stat115/2021/HW4/p1_data/ProstateCancer_H3K4me3_peaks.bed` and `/n/stat115/2021/HW4/p1_data/ProstateCancer_H3K27ac_peaks.bed` are the H3K4me3 and H3K27ac peaks files of prostate cancer. Try to find the intersection of loops and histone modification signal intervals. In the `/n/stat115/2021/HW4/p1_data/Expr_loc.txt`, the first three columns are chromosome coordinates, the fourth column is the gene expression score of a prostate cancer tissue, and the rest columns are the gene symbols.
 
@@ -57,15 +127,55 @@ The `/n/stat115/2021/HW4/p1_data/ProstateCancer_H3K4me3_peaks.bed` and `/n/stat1
 
 **Hint3:** The methylation group might have a lower signal-noise ratio. So drop the genes with very low expression (< 0.0001) and use the log scale when you generate the violin plots for better visualization. You can use `ylim` and `scale_y_log10` from `ggplot`.
 
+\textbf{Answer}: The total number of lines for Methylation is 1767 lines, H3K4me3 is 10740 lines, and H3K27ac is 9531 lines. Violin plots are provided below for expression level of genes with methylation, H3K4me3, and H3K27ac in their promoters using the fourth column (the gene expression score of a prostate cancer tissue). I found that the higher methylation signals do repress the gene expression because looking at the violin plot, the Methylation had fewer gene scores in the higher values and more at lower scores (hence it doesn't have a bulb shape at the top or widen at the top compared to the other groups).
+
 ```{bash eval=FALSE}
 # YOUR BASH SCRIPTS HERE
+# setup environment
+module load bedtools2
 
+# producing output files
+bedtools intersect -a /n/stat115/2021/HW4/p1_data/Expr_loc.txt -b /n/stat115/2021/HW4/p1_data/ProstateCancer_H3K4me3_peaks.bed -wa | uniq > HW4/i2/H3K4me3.txt
+
+bedtools intersect -a /n/stat115/2021/HW4/p1_data/Expr_loc.txt -b /n/stat115/2021/HW4/p1_data/ProstateCancer_H3K27ac_peaks.bed -wa | uniq > HW4/i2/H3K27ac.txt
+
+bedtools intersect -a /n/stat115/2021/HW4/p1_data/Expr_loc.txt -b /n/stat115/2021/HW4/p1_data/Methylation.bed -wa | uniq > HW4/i2/Methylation.txt
+
+# moving generated output to local drive
+scp -r stat215u2107@login.rc.fas.harvard.edu:HW4/i2 "QI.2"
+scp stat215u2107@login.rc.fas.harvard.edu:/n/stat115/2021/HW4/p1_data/Expr_loc.txt "QI.2/Background.txt"
 ```
 
 ```{r}
-# YOUR PLOTTING SCRIPTS AND RESULTS HERE
+library(RColorBrewer)
+library(ggplot2)
 
+Background = read.delim("QI.2/Background.txt", header=F)
+H3k4me3 = read.delim("QI.2/H3K4me3.txt", header=F)
+H3k27ac = read.delim("QI.2/H3K27ac.txt", header=F)
+Methylation = read.delim("QI.2/Methylation.txt", header=F)
+
+nrow(H3K4me3); nrow(H3K27ac); nrow(Methylation)
 ```
+
+```{r, warning=FALSE, message=FALSE}
+expr_df = data.frame(expr = c(H3k4me3$V4, H3k27ac$V4, Methylation$V4, Background$V4), state = c(rep("H3k4me3", length(H3k4me3$V4)), rep("H3k27ac", length(H3k27ac$V4)), rep("Methylation", length(Methylation$V4)), rep("Background", length(Background$V4))))
+
+getPalette <- colorRampPalette(brewer.pal(8, "Set2"))
+ggplot(expr_df) +
+    geom_violin(aes(x = state, y = expr, fill = state)) +
+    theme_bw() +
+    theme(
+        axis.text.x = element_text(size = 10, face = "bold", hjust = 0.5, vjust = 0.5, angle = -45),
+        axis.text.y = element_text(size = 10, face = "bold"),
+        axis.title.x = element_text(size = 12, face = "bold"),
+        axis.title.y = element_text(size = 12, face = "bold")
+    ) + 
+    scale_fill_manual(values = getPalette(length(unique(expr_df$state)))) +
+    ylim(0.0001, 10) +
+    scale_y_log10()
+```
+
 
 # Part II. HiC (5/6 pts)
 
@@ -119,6 +229,7 @@ HiC_subreads GM06990 R2 HindIII
 ```
 Run the runHiC commands and generate the stats table. Put here the output `*.stats` and plots `*.png` for the summary group `allReps` **ONLY**. What is the message you can read from the results.
 
+\textbf{Answer}: I can say the following about the quality of this subsampled data: XXXX. The QC criteria of Hi-C data is XXXexplanationXXX. The message I can read from the results is XXXXXX.
 
 ``` {bash eval=FALSE}
 # YOUR BASH SCRIPTS HERE
@@ -132,6 +243,8 @@ Run the runHiC commands and generate the stats table. Put here the output `*.sta
 
 
 ```
+
+
 
 **II.2 (2 pts) In the II.1, you have learned how to generate a genomic interaction matrix on the example file. Here we provided a genomic interaction data on chr21 in prostate cancer(`data/chr21.chr21_10000.cool`). Normalize this data at 10k resolution and perform loop calling with 10% CTCF model. How many loops with >0.9 confidence can you find? Then draw a genomic contact heatmap to show the interaction in chr21. Are there any highly interactive regions?**
 
@@ -194,9 +307,17 @@ http://www.adeveloperdiary.com/data-science/machine-learning/implement-viterbi-a
 
 **Hint2**: The observations are continuous or have too many discrete values. Try binning them into a few discrete regions. Use `cut` function built in R.
 
+\textbf{Answer}: I first `scp` the file to my local directory. 
+
+```{bash eval=FALSE}
+# YOUR BASH SCRIPTS HERE
+# copying the data file
+scp stat215u2107@login.rc.fas.harvard.edu:/n/stat115/2021/HW4/p3_data/ESC.Dixon_2015.DI.chr21.txt "p3/DI_data.txt"
+```
+
 ```{r}
 # YOUR SCRIPTS HERE
-
+data = read.delim("p3/DI_data.txt", header = F)
 ```
 
 
