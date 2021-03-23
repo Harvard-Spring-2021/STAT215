@@ -1,0 +1,23 @@
+000_SequencedReads:  30000
+	010_DoubleSideMappedReads:  23204
+	020_SingleSideMappedReads:  5600
+	030_UnmappedReads:  1196
+100_NormalPairs:  23204
+	110_AfterFilteringReads:  19602
+	120_SameFragmentReads:  3452
+		122_SelfLigationReads:  468
+		124_DanglingReads:  2964
+		126_UnknownMechanism:  20
+	130_DuplicateRemoved:  150
+400_TotalContacts:  19602
+	410_IntraChromosomalReads:  8748
+		412_IntraLongRangeReads(>=20Kb):  5738
+		412_IntraShortRangeReads(<20Kb):  3010
+	420_InterChromosomalReads:  10854
+
+Critical Indicators:
+Double Unique Mapped Ratio = 23204 / 30000 = 0.7735
+Self-Ligation Ratio = 468 / 30000 = 0.0156
+Dangling-Reads Ratio = 2964 / 30000 = 0.0988
+Long-Range Ratio = 5738 / 19602 = 0.2927
+Data Usage = 19602 / 30000 = 0.6534

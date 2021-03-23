@@ -16,7 +16,7 @@ DNA methylation patterns are altered in many diseases, including cancer, which m
 
 1. (0.5 pt) Make your own working directory in your local home folder. Download bismarker and 'install' it https://github.com/FelixKrueger/Bismark#installation. Note that the latest version is written in perl language, so execute the program by either `/absolute/path/to/the/bismark-*/file` or `perl bismark-*` under the corresponding folder.
 
-\textbf{Answer}: Used lab instructions found here: [Link](https://github.com/stat115/Lab_2021/blob/main/Lab07/How%20to%20install%20Bismark.pdf).
+**Answer**: Used lab instructions found here: [Link](https://github.com/stat115/Lab_2021/blob/main/Lab07/How%20to%20install%20Bismark.pdf).
 
 ``` {bash eval=FALSE}
 # YOUR BASH SCRIPTS HERE
@@ -40,7 +40,7 @@ unzip 0.23.0.zip
 
 2.  Prepare the genome for Bismark. You can start by copying the hg38 from `/n/stat115/2021/HW1/index/hg38_raw/` to your local machine and build from there (1.5 pt graduate students only). One of the main jobs is to conduct the C-T or G-A conversion. Why are we doing this? (0.5 pt, all students)
 
-\textbf{Answer}: First I copy the `hg38` to my local directory. Then I set up cluster computing node. Then I use `bismark_genome_preparation` from Bismark to prepare the genome using documentation from [here](https://github.com/FelixKrueger/Bismark/tree/master/Docs). The reason for conducting the C-T and G-A conversion is because it provides an appropriate reference genome. The reason for this section (Part I) is because when we do this analysis on a sample, we change the sequence so using the standard human genome wouldn't work when we go to do alignment - in this part, we resolve this issue by making a conversion of our background genome so we have something to do our mapping/realignment. This helps with our goal of identifying the regions that are protected by methylation - this lets know where the methylation events are.
+**Answer**: First I copy the `hg38` to my local directory. Then I set up cluster computing node. Then I use `bismark_genome_preparation` from Bismark to prepare the genome using documentation from [here](https://github.com/FelixKrueger/Bismark/tree/master/Docs). The reason for conducting the C-T and G-A conversion is because it provides an appropriate reference genome. The reason for this section (Part I) is because when we do this analysis on a sample, we change the sequence so using the standard human genome wouldn't work when we go to do alignment - in this part, we resolve this issue by making a conversion of our background genome so we have something to do our mapping/realignment. This helps with our goal of identifying the regions that are protected by methylation - this lets know where the methylation events are.
 
 ```{bash eval=FALSE}
 # YOUR BASH SCRIPTS HERE
@@ -62,7 +62,7 @@ Attached is the output on the console from `bismark_genome_preparation`
 
 3. (1 pt) Now that we prepared the genome for the question, follow the Bismark docs to run the main bismark functions, then deduplicate and extract the methylations. For undergraduate students, use directly the converted genome `/n/stat115/2021/HW4/p1_data/hg38/` or here `/n/home13/stat115u2102/hw4/setup/hg38_p1/`. What do you see from `perl bismark2report`?
 
-\textbf{Answer}: I follow the documentation provided in the slide. As per TA Jiazhen Rong's Slack message responding to whether graduate students can use the converted genome: "Yes you definitely could use the pre-converted genome since I.1.3. But still need to report some important lines of I.1.2's log message after bismark converting step finishes running," I will use the pre-converted genome for this question due to the time needed for I.1.2 to complete. 
+**Answer**: I follow the documentation provided in the slide. As per TA Jiazhen Rong's Slack message responding to whether graduate students can use the converted genome: "Yes you definitely could use the pre-converted genome since I.1.3. But still need to report some important lines of I.1.2's log message after bismark converting step finishes running," I will use the pre-converted genome for this question due to the time needed for I.1.2 to complete. 
 
 ``` {bash eval=FALSE}
 # YOUR BASH SCRIPTS HERE
@@ -127,7 +127,7 @@ The `/n/stat115/2021/HW4/p1_data/ProstateCancer_H3K4me3_peaks.bed` and `/n/stat1
 
 **Hint3:** The methylation group might have a lower signal-noise ratio. So drop the genes with very low expression (< 0.0001) and use the log scale when you generate the violin plots for better visualization. You can use `ylim` and `scale_y_log10` from `ggplot`.
 
-\textbf{Answer}: The total number of lines for Methylation is 1767 lines, H3K4me3 is 10740 lines, and H3K27ac is 9531 lines. Violin plots are provided below for expression level of genes with methylation, H3K4me3, and H3K27ac in their promoters using the fourth column (the gene expression score of a prostate cancer tissue). I found that the higher methylation signals do repress the gene expression because looking at the violin plot, the Methylation had fewer gene scores in the higher values and more at lower scores (hence it doesn't have a bulb shape at the top or widen at the top compared to the other groups).
+**Answer**: The total number of lines for Methylation is 1767 lines, H3K4me3 is 10740 lines, and H3K27ac is 9531 lines. Violin plots are provided below for expression level of genes with methylation, H3K4me3, and H3K27ac in their promoters using the fourth column (the gene expression score of a prostate cancer tissue). I found that the higher methylation signals do repress the gene expression because looking at the violin plot, the Methylation had fewer gene scores in the higher values and more at lower scores (hence it doesn't have a bulb shape at the top or widen at the top compared to the other groups).
 
 ```{bash eval=FALSE}
 # YOUR BASH SCRIPTS HERE
@@ -183,6 +183,8 @@ Genome architecture plays a key role in nuclear functions. The spatial arrangeme
 
 **II.1 (2 pts) Given subsampled example fastq files generated by Hi-C technique(`/n/stat115/2021/HW4/p2_data/HiC_fq`), perform reads mapping, filtering, and binning to this data with runHiC(http://xiaotaowang.github.io/HiC_pipeline/quickstart.html). How about the quality of this subsampled data? Could you explain the QC criteria of Hi-C data?**
 
+**Answer**: According to the documentation, the quality control criteria of Hi-C data is Unique-Mapping Ratio (low value of this metric indicates low sequencing quality, sample contamination or incomplete genome assembly), Self-Ligation Ratio, Dangling-Reads Ratio, and Long-Range Ratio (low value ($<0.15$) of this metric indicates the failed experiment). These statistics can help determine the quality of our Hi-C data. Fortunately, we can check the quality of this subsampled data using `runHiC quality`.
+
 <u>**Instructions:**</u>
 
 1. First load the prepared anaconda environment. Make sure use exactly the same version for python and the dependencies. Note the difference from doing the same on local machines, e.g. a laptop or PC.
@@ -192,14 +194,15 @@ conda activate /n/stat115/2021/HW4/conda_env37
 module load samtools minimap2 bwa sratoolkit
 ```
 
+**Answer**: Completed.
+
 2. [Optional] The runHiC script takes the bwa index as the input. You can either use the one we used for HW3 `/n/stat115/2021/HW3/bwa_hg38_index` or build your own index separately.
+
+**Answer**: Utilized the bwa and bash commands similar to how I did it in Q1 for HW3. For the sake of consistency, I will stick with the provided bwa index.
 
 3. Note that the index file is **NOT*** the same as the one we used for bismark. What is the main difference between bowtie and bwa in practice? (Hint: https://www.biostars.org/p/134418/). Copy the index to your local dir and build the index.
 
-```
-# YOUR ANSWER HERE
-
-```
+**Answer**: The main difference between Bowtie and BWA in practice is speed and accuracy of the algorithm. BWA is a software package for mapping low-divergent sequences against a large reference genome, such as the human genome. Bowtie is an ultrafast, memory-efficient short read aligner; it aligns short DNA sequences (reads) to the human genome at a rate of over 25 million 35-bp reads per hour. Thus we see BWA and Bowtie are made for different scenarios. In addition, according to the forum discussion, BWA appears to be slower, albeit does a more sensitive search and is more accurate compared to Bowtie. However I also did some additional Google search and found this paper: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5834436/. The paper "conclude that there is not a single mapper that is ideal in all scenarios but rather the choice of alignment tool should be driven by the application and sequencing technology" in comparing BWA, Bowtie, and other algorithms. 
 
 4. Prepare your working directory with the index files and your metadata file `datasets.tsv`. See http://xiaotaowang.github.io/HiC_pipeline/quickstart.html#create-the-meta-data-file. In our case we would use these following setup configuration. Make sure you have more than one replica sample in your metadata to avoid future ambiguity. If you skipped step 2, copy the prepared index file `/n/stat115/2021/HW4/p2_data/hg38` or `/n/home13/stat115u2102/hw4/setup/hg38_p2` to your wdr directly. Also download `hg38.chrom.sizes` from canvas to your wdr.
 
@@ -207,6 +210,8 @@ module load samtools minimap2 bwa sratoolkit
 HiC_subreads GM06990 R1 HindIII
 HiC_subreads GM06990 R2 HindIII
 ```
+
+**Answer**: Bash commands below.
 
 5. Check your wdr, which should have at least the following folders.
 ```
@@ -227,45 +232,141 @@ HiC_subreads GM06990 R2 HindIII
 ├── hg38.chrom.sizes
 └── datasets.tsv
 ```
+
+**Answer**: Attached is a screen shot of the directory (as per Bo Yuan's message on Slack, we shouldn't have HiC_subreads and HiC_subreads.complete prior to running runHiC).
+
+![Directory](QII.1/directory.png)
+
 Run the runHiC commands and generate the stats table. Put here the output `*.stats` and plots `*.png` for the summary group `allReps` **ONLY**. What is the message you can read from the results.
 
-\textbf{Answer}: I can say the following about the quality of this subsampled data: XXXX. The QC criteria of Hi-C data is XXXexplanationXXX. The message I can read from the results is XXXXXX.
+**Answer**: The message I can read from the results is provided below. I show the output `*.stats` and plots `*.png` for the summary group `allReps`.
 
 ``` {bash eval=FALSE}
 # YOUR BASH SCRIPTS HERE
+# make the work directory
+mkdir HW4/II.1
+cd HW4/II.1
+mkdir setup results
+cd setup
 
+# copy the prepared index file
+cp -r /n/stat115/2021/HW4/p2_data/hg38 .
 
+# making datasets.tsv
+vim datasets.tsv
+
+# copying the HiC_subreads
+mkdir HiC_subreads
+cp -r /n/stat115/2021/HW4/p2_data/HiC_fq/*.fastq HiC_subreads
+
+# transferring the hg38.chrom.sizes (on local machine)
+scp QII.1/hg38.chrom.sizes stat215u2107@login.rc.fas.harvard.edu:HW4/II.1/setup
+
+# runHiC (step-by-step)
+runHiC mapping -p setup -g hg38 -f HiC_subreads -F FASTQ -A bwa-mem -t 10 -O BAM --include-readid --include-sam --drop-seq --chunkSize 1500000 --logFile results/runHiC-mapping.log 
+
+runHiC filtering --pairFolder pairs-hg38 --logFile results/runHiC-filtering.log --nproc 10
+
+runHiC binning -f filtered-hg38/ --logFile results/runHiC-binning.log --nproc 10
+
+# get report tables and figures
+runHiC quality -m datasets.tsv -L filtered-hg38 --logFile results/runHiC.log
+
+# copy results to local file
+scp -r stat215u2107@login.rc.fas.harvard.edu:HW4/II.1/filtered-hg38 "QII.1"
 ```
 
 
-```
-# YOUR STATS TABLE HERE
+![allReps Stats Terminal Output](QII.1/stats.png)
 
+![allReps Stats PNG](QII.1/filtered-hg38/GM06990-HindIII-allReps-stats.png)
 
-```
+![allReps Library Size](QII.1/filtered-hg38/GM06990-HindIII-allReps-librarySize.png)
 
+![allReps Pair Type](QII.1/filtered-hg38/GM06990-HindIII-allReps-PairType.png)
+
+Observing this report, I see we have subpar quality. The Library-size distribution seems inconsistent and the lines on the Pair Type plot don't converge. According to the documentation (http://xiaotaowang.github.io/HiC_pipeline/quality.html), this could indicate we have QC issues with our data.
 
 
 **II.2 (2 pts) In the II.1, you have learned how to generate a genomic interaction matrix on the example file. Here we provided a genomic interaction data on chr21 in prostate cancer(`data/chr21.chr21_10000.cool`). Normalize this data at 10k resolution and perform loop calling with 10% CTCF model. How many loops with >0.9 confidence can you find? Then draw a genomic contact heatmap to show the interaction in chr21. Are there any highly interactive regions?**
 
 **Hint:** cooler(https://cooler.readthedocs.io/en/latest/) can perform normalization and peakachu(https://github.com/tariks/peakachu) can perform loop calling on Hi-C data. higlass(https://higlass.io/) may help with visualization.
 
+
+**Answer**: Using cooler and peakachu, I get there are 78 loops with >0.9 confidence (count the number lines in the resulting bedpe file). Then I used higlass to draw genomic contact heatmap to show the interaction in chr21 (I attached a screenshot of my Jupyter Notebook as well). I also provide the heatmap that was generated by higlass. I found there are highly interactive regions between neighboring genomic regions lead to a strong diagonal pattern in the resulting heatmap.
+
 ```{bash eval=FALSE}
 # YOUR BASH SCRIPTS HERE
+# copy cool file
+cp /n/stat115/2021/HW4/p2_data/chr21.chr21_10000.cool .
 
+# cool normalize
+cooler balance --max-iters 1000 chr21.chr21_10000.cool --force
 
+hicConvertFormat -m chr21.chr21_10000.cool --inputFormat cool --outputFormat mcool -o chr21.chr21_10000.mcool
+
+# transferring the mcool file to local drive
+scp stat215u2107@login.rc.fas.harvard.edu:HW4/II.2/chr21.chr21_10000.mcool "QII.2"
+
+# peakachu
+cp /n/stat115/2021/HW4/p2_data/down10.ctcf.pkl .
+
+peakachu score_genome -r 10000 -w 5 --balance -p chr21.chr21_10000.cool -m down10.ctcf.pkl -O ./peakachu_output
+
+cd peakachu_output
+
+peakachu pool -i chr21.bed -t 0.9 > chr21.loops.bedpe
+
+# get number of lines in bedpe file
+wc -l chr21.loops.bedpe     # 78
 ```
 
-```{}
+```{python eval=FALSE}
 # YOUR HIGLASS CODES HERE
+# Install higlass in Jupyter Notebook
+import sys
+!{sys.executable} -m pip install higlass-python
 
+# Install on Terminal
+jupyter nbextension install --py --sys-prefix --symlink higlass 
+jupyter nbextension enable --py --sys-prefix higlass
+jupyter notebook
+
+# Inside my jupyter notebook
+import higlass
+from higlass.client import Track, View
+
+# Define track set (dataset)
+tsl = higlass.tilesets.cooler('chr21.chr21_10000.mcool')
+
+# Define trackers (figure axes)
+trl = Track('heatmap', tileset = tsl)
+
+# Generate plots
+view1 = View([trl])
+
+# Display interactive output
+display, server, viewconf = higlass.display([view1])
+display
 ```
+
+![Higlass Juypter Notebook](QII.2/jupyter.png)
+
+
+![Higlass Heatmap](QII.2/heatmap.png)
+
+
+
 
 
 **II.3 (1 pt) Transcription factors help construct the chromatin loops. With the provided prostate cancer ATAC-seq peaks file(`data/tumor_ATAC_peaks.bed`), could you find the open regions in the loop anchors? What factors bind in the loop anchors? What potential roles may these factors play?**
 
+**Answer**:
+
 ```{bash eval=FALSE}
 # YOUR BASH SCRIPTS HERE
+# finding intersection
+bedtools intersect -a /n/stat115/2021/HW4/p2_data/tumor_ATAC_peaks.bed -b {anchor locations}
 
 ```
 
