@@ -573,25 +573,36 @@ You will explore the following online resources: The NHGRI-EBI GWAS catalog (htt
 
 **IV.1 Explore whether there are genetic variants within the gene BRCA2 which are associated with any traits. What traits are associated with the BRCA2 variants? Which SNP has the smallest p-value related to breast cancer? What is the risk allele?**  
 
-**Answer**:
+**Answer**: Sorting by lowest $p$-value, I see the traits that are associated with the BRCA2 variants are Apolipoprotein B levels, lung cancer, breast cancer, and cholesterol levels. The SNP that has the smallest $p$-value related to breast cancer is `rs11571833-T` with alleles `A>T`. I've attached a screen shot of my query on GWAS.
+
+![BRCA2 Traits](partIV/brca2_traits.png)
+Investigating further, I see these are properties of this of SNP.
+
+![SNP Info](partIV/snp_info.png)
+
+![dbSNP Info](partIV/dbSNP.png)
+This SNP is creating a stop codon in the axonic region of BRCA2. This matches the risk effect of `T` because mutating `A` into `T` will create a stop codon for BRCA2 and possibly (can't say for sure causal since this is observational data) creating a truncated protein leading to breast cancer.
 
 
+**IV.2 For the BRCA2 SNP with the most significant association with breast cancer, what consequence does the risk allele have on the BRCA2 protein sequence? Based on 1000 Genomes in LDLink, what is the allele frequency of the risk allele among the 5 ethnicities. In the population with the highest risk in the resource, what is the expected number of people with heterozygous genotype at this SNP, assuming linkage disequilibrium?** 
 
 
+**Answer**: As mention in the previous problem, for the BRCA2 SNP with the most significant association with breast cancer, it was identified as `rs11571833-T`. This matches the risk effect of `T` because the consequence of mutating `A` into `T` is that it creates a stop codon for BRCA2 and possibly (can't say for sure causal since this is observational data) creating a truncated protein leading to breast cancer. 
+
+Now I'll use LDpop tool in LDLink to find the allele frequency of the risk allele among the 5 ethnicities: AFR, EUR, EAS, AMR and SAS. 
+
+1. For AFR, I got `A: 99.92%, T: 0.08%`, `N = 661`
+2. For EUR, I got `A: 98.91%, T: 1.09%`, `N = 503`
+3. For EAS, I got `A: 100.0%, T: 0.0%`, `N = 504`
+4. For AMR, I got `A: 99.71%, T: 0.29%`, `N = 347`
+5. For SAS, I got `A: 99.18%, T: 0.82%`, `N = 489`
+
+The population with the highest risk would EUR (since the `T` is the highest proportion for them). In this population, assuming linkage disequilibrium, the expected number of people with heterozygous genotype at this SNP is roughly 5 people (math for expected number `0.0109 * 503 = 5.4827`).
 
 
+I've attached a screen shot of my query on LDLink.
 
-
-
-
-
-**IV.2 For the BRCA2 SNP with the most significant association with breast cancer, what consequence does the risk allele have on the BRCA2 protein sequence? Based on 1000 Genomes in LDLink, what is the allele frequency of the risk allele among the 5 ethnicities In the population with the highest risk in the resource, what is the expected number of people with heterozygous genotype at this SNP, assuming linkage disequilibrium?** 
-
-
-**Answer**:
-
-
-
+![Ethnicities Allele Frequency](partIV/eaf.png)
 
 
 
@@ -602,47 +613,53 @@ You will explore the following online resources: The NHGRI-EBI GWAS catalog (htt
 
 **IV.3 Explore a certain SNP, rs4784227, that was reported to be associated with breast cancer. Is it an intergenic, exonic or intronic variant? What gene does it fall in?**  
 
-**Answer**:
+**Answer**: Using GWAS search, I find that rs4784227 is an intronic variant and falls in gene CASC16. This is also confirmed on dbSNP. I've attached a screen shot of my work.
+
+![rs4784227 Information](partIV/q3.1.png)
 
 
-
-
-
-
-
-
+![rs4784227 dbSNP](partIV/q3.1dbsnp.png)
 
 
 
 **IV.4 Explore the SNP rs4784227 in RegulomeDB. What functional category does the rank score (or Regulome DB Score) implicate? What factors does RegulomeDB take into consideration while scoring the potential function of SNPs?**
 
-**Answer**:
+**Answer**: For SNP rs4784227 in RegulomeDB, the Regulome DB Score is 2b (screen shot attached). According to the documentation, a score of 2b means TF binding + any motif + DNase Footprint + DNase peak. This score therefore means that there is transcription factor binding at this SNP, the SNP overlaps with motif scanning results, and the SNP is within Dnase printing region and peaks. This is all good indications that this SNP has some functional purpose. The factors RegulomeDB take into consideration while scoring the potential function of SNPs are listed on their documentation page (which I provide a screen shot for as well).
+
+![rs4784227 Regulome DB Score](partIV/regSNP.png)
 
 
+![Potential Regulome DB Score](partIV/pscore.png)
 
 
-
-
-
+![Regulome DB Score Criteria](partIV/cscore.png)
 
 
 
 **IV.5 Describe the evidence that implicates the regulatory potential of rs4784227, for example, list several transcription factors with binding peaks overlapping this SNP; report the cell types with open chromatin regions overlapping this SNP.**
 
-**Answer**:
+**Answer**: The score for rs4784227 being 2b is a good starting point for rs4784227 being functional. Looking at the protein binding table for the SNP, we see factor binding to key proteins related to cancer such as FOXA1, FOXA2, and ARID3A (did Google searches and found papers saying they were linked with cancer). In fact there is a paper that link this SNP to FOXA1 (source: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6635718/). This is good support that this SNP plays a part in this regulatory function. 
+
+In addition, looking at the chromatin structure table, we see that rs4784227 is within opne chromatin region robustly in the corresponding breast cancer cell type based on the cell type association with breast cancer.
+
+I also attach several images from RegulomeDB to support my claims.
+
+![rs4784227 Protein Binding](partIV/table.png)
 
 
+![rs4784227 ChIP Graph](partIV/hist.png)
 
 
-
-
-
-
+![rs4784227 Chromatin Structure](partIV/chroma.png)
 
 
 **IV.6 [Graduate Students] Read the paper by Cowper-Sal et al. (PMID 23001124) and summarize the potential mechanisms of the above SNP’s function in terms of affecting transcription factor-DNA interaction and regulating genes.**
 
-**Answer**:
+**Answer**: I found the paper on this website: https://pubmed.ncbi.nlm.nih.gov/23001124/. The title was *Breast cancer risk-associated SNPs modulate the affinity of chromatin for FOXA1 and alter gene expression*. It's challenging to see what role SNPs have, however this research team used a new methodology that combines cistromics, epigenomics and genotype imputation to identify the mechanism of the SNPs. They annotated the non-coding regions of breast cancer genome to find the mechanism of relevant SNPs. Their results found that breast cancer risk-associated SNPs are enriched in the cistromes of FOXA1 and ESR1. They observed the effect of the rs4784227 SNP on the TOX3 gene found within the 16q12.1 risk locus and saw it modulate the affinity of chromatin for FOXA1 at distal regulatory elements (similar to the majority of risk-associated SNPs).
+
+They found SNP rs4784227 is associated with BCa and is predicted to disrupt the binding of an undetermined transcription factor. It is also a raSNP that directly maps to a FOXA1 binding site. They found the PWM for the FKH motif predicts a 9% affinity increase for the variant T risk allele at rs4784227 compared to the reference C allele. They also found the SNP rs4784227 directly overlaps a FKH motif within a FOXA1 binding site that lies in a regulatory element (marked by H3K4me2) 18 kb away from the TOX3 gene.
+
+In conclusion, the SNP rs4784227 affects FOXA1 and TOX3 gene, and causes a decrease in the expression of TOX3 and impact FOXA1, which contributes to breast cancer.
 
 
 
