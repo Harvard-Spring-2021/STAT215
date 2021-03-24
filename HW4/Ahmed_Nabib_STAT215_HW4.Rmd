@@ -155,7 +155,7 @@ H3k4me3 = read.delim("QI.2/H3K4me3.txt", header=F)
 H3k27ac = read.delim("QI.2/H3K27ac.txt", header=F)
 Methylation = read.delim("QI.2/Methylation.txt", header=F)
 
-nrow(H3K4me3); nrow(H3K27ac); nrow(Methylation)
+nrow(H3k4me3); nrow(H3k27ac); nrow(Methylation)
 ```
 
 ```{r, warning=FALSE, message=FALSE}
@@ -361,27 +361,90 @@ display
 
 **II.3 (1 pt) Transcription factors help construct the chromatin loops. With the provided prostate cancer ATAC-seq peaks file(`data/tumor_ATAC_peaks.bed`), could you find the open regions in the loop anchors? What factors bind in the loop anchors? What potential roles may these factors play?**
 
-**Answer**:
+**Answer**: I found the open regions in the loop anchors for the provided prostate cancer ATAC-seq peaks file(`data/tumor_ATAC_peaks.bed`) by using the bedpe file from II.2 and `bedtools intersect`. I found 62 regions because the resulting file had 62 lines. Then I used Homer to find motifs. According to Jiazhen on Slack, for findMotifsGenome.pl, "You can also use the HW3/bwa_hg38_index/hg38.fasta." In my `homerResults.html` file, I see 40 motif matches, however only the first 8 motifs don't get flagged as possible false positives. I provide a screen shot of these first motifs in the `homerResults.html` below which show the factors that bind in the loop anchors. I notice that motif #1 (FKH2) (a Forkhead family transcription factor) and motif #5 (ZmHOX2a) in my `homerResults.html` were motifs we saw in HW3 when we were exploring the tumor data (hence it seems consistent with our previous results). As we saw from HW3, these motifs are correlated with AR which is important for tumors.
 
 ```{bash eval=FALSE}
 # YOUR BASH SCRIPTS HERE
-# finding intersection
-bedtools intersect -a /n/stat115/2021/HW4/p2_data/tumor_ATAC_peaks.bed -b {anchor locations}
+# getting the anchors from bedpe data
+awk 'BEGIN {OFS="\t"}{print $1,$2,$3}' ../II.2/peakachu_output/chr21.loops.bedpe > anchor1.txt
+awk 'BEGIN {OFS="\t"}{print $4,$5,$6}' ../II.2/peakachu_output/chr21.loops.bedpe > anchor2.txt
+cat anchor1.txt anchor2.txt > anchor.txt
 
+# finding intersections
+bedtools intersect -a /n/stat115/2021/HW4/p2_data/tumor_ATAC_peaks.bed -b anchor.txt > output.txt
+
+# get number of lines in output file
+wc -l output.txt     # 62
+
+# switching to other conda environment
+conda deactivate
+source /n/stat115/2021/HW4/miniconda3/bin/activate
+conda activate /n/stat115/2021/HW4/homer_env
+
+# use homer to identify motifs
+findMotifsGenome.pl output.txt /n/stat115/2021/HW3/bwa_hg38_index/hg38.fasta motifs
+
+# moving homerResults.html to local directory
+scp -r stat215u2107@login.rc.fas.harvard.edu:HW4/II.3/motifs "QII.3"
 ```
+
+
+![Homer Results](QII.3/homerResults.png)
+
+
+
 
 
 **II.4 (1 pt, graduates only) Normally histone modification H3K27ac marks the enhancer regions on the genome, and H3K4me3 marks the promoter regions. Use the prostate tumor H3K27ac and H3K4me3 peaks files in I.2 here. Based on the loop file, could you find the loops that contact an enhancer region with a gene promoter region on chr21? Do these target genes express higher than the genes without loops structure?**
 
+**Answer**: I discussed with Jiazhen Rong privately about my approach and she confirmed my strategy. I intersect the anchor file from II.3 with the H3K4me3 bed file, H3K27ac bed file, and background (Expr_loc_chr21.txt) file. Then I find the common region and get my final output has 13 matches. I then make violin plots comparing the target genes with the genes without loops structure. I observe that the target genes are expressed higher than the genes without loops structure (the violin plot shows the target genes are predominant at higher values in terms of gene expression metric).
 
 ```{bash eval=FALSE}
 # YOUR BASH SCRIPTS HERE
+# setting up QII.4 folder
+cp ../II.3/anchor.txt .
 
+# finding intersections with anchors
+bedtools intersect -a /n/stat115/2021/HW4/p1_data/ProstateCancer_H3K4me3_peaks.bed -b anchor.txt > H3K4me3_output.txt
+
+bedtools intersect -a /n/stat115/2021/HW4/p1_data/ProstateCancer_H3K27ac_peaks.bed -b anchor.txt > H3K27ac_output.txt
+
+bedtools intersect -a /n/stat115/2021/HW4/p2_data/Expr_loc_chr21.txt -b anchor.txt > expr_loc_chr21_output.txt
+
+# finding intersection between enhancer and promoter files
+bedtools intersect -a H3K27ac_output.txt -b H3K4me3_output.txt > promoter_enhancer.txt
+
+# finding intersection between all three
+bedtools intersect -a expr_loc_chr21_output.txt -b promoter_enhancer.txt > final_output.txt
+
+# getting number of loops 
+wc -l final_output.txt      # 13 lines
+
+# copy to local directory
+scp stat215u2107@login.rc.fas.harvard.edu:HW4/II.4/expr_loc_chr21_output.txt "QII.4"
+scp stat215u2107@login.rc.fas.harvard.edu:HW4/II.4/final_output.txt "QII.4"
 ```
 
-```{r}
+```{r, warning=FALSE, message=FALSE}
 # YOUR R SCRIPTS HERE
+with_loop = read.delim("QII.4/final_output.txt", header=F)
+without_loop = read.delim("QII.4/expr_loc_chr21_output.txt", header=F)
 
+expr_df = data.frame(expr = c(with_loop$V4, without_loop$V4), state = c(rep("Target Gene", length(with_loop$V4)), rep("General Gene", length(without_loop$V4))))
+
+getPalette <- colorRampPalette(brewer.pal(8, "Set2"))
+ggplot(expr_df) +
+    geom_violin(aes(x = state, y = expr, fill = state)) +
+    theme_bw() +
+    theme(
+        axis.text.x = element_text(size = 10, face = "bold", hjust = 0.5, vjust = 0.5, angle = -45),
+        axis.text.y = element_text(size = 10, face = "bold"),
+        axis.title.x = element_text(size = 12, face = "bold"),
+        axis.title.y = element_text(size = 12, face = "bold")
+    ) + 
+    scale_fill_manual(values = getPalette(length(unique(expr_df$state)))) +
+    ylim(0.0001, 10) +
+    scale_y_log10()
 ```
 
 
@@ -408,7 +471,7 @@ http://www.adeveloperdiary.com/data-science/machine-learning/implement-viterbi-a
 
 **Hint2**: The observations are continuous or have too many discrete values. Try binning them into a few discrete regions. Use `cut` function built in R.
 
-\textbf{Answer}: I first `scp` the file to my local directory. 
+**Answer**: I first `scp` the file to my local directory. Then I utilized the HMM example code in guiding my answer. My results align with the results from the lab. Plots of the initial data and finalized hidden markov model are provided.
 
 ```{bash eval=FALSE}
 # YOUR BASH SCRIPTS HERE
@@ -418,7 +481,87 @@ scp stat215u2107@login.rc.fas.harvard.edu:/n/stat115/2021/HW4/p3_data/ESC.Dixon_
 
 ```{r}
 # YOUR SCRIPTS HERE
-data = read.delim("p3/DI_data.txt", header = F)
+# load the data
+data = read.delim("p3/DI_data.txt", header = F, col.names = c("chr", "start", "end", "DI"))
+data$mid = (data$end + data$start) / 2
+
+# making plots
+plot_df = as.data.frame(cbind(mid_point = data$mid, DI = data$DI))
+ggplot(plot_df, aes(x = as.numeric(as.character(mid_point)),
+                    y = as.numeric(as.character(DI)))) +
+    geom_point() +
+    labs(y = "Midpoints", x = "DI Score") +
+    ggtitle("Hidden Markov Model Data - Initial Graph") +
+    theme(axis.text.x = element_text(angle = 90, hjust = 0.5)) +
+    geom_col(width = 0.5)
+```
+```{r}
+# make discrete states from continuous indices
+obs_states = cut(data$DI, breaks = c(min(data$DI) - 1,
+                                     -1200, -800, -500, 0,
+                                     500, 800, 1200, max(data$DI) + 1),
+                 right = FALSE)
+
+# Viterbi algorithm
+Viterbi = function(v, a, b, initial_distribution) {
+    T = length(v)   # number of time points
+    M = nrow(a)     # number of hidden states
+    prev = matrix(0, T-1, M)    # matrix storing from which previous hidden state
+    omega = matrix(0, M, T)     # matrix storing probability of each hidden state
+        
+    omega[, 1] = log(initial_distribution * b[, v[1]])  # log scale - prevent underflow
+    
+    # iterate through time points
+    for (t in 2:T) {
+        # iterate through hidden state
+        for (s in 1:M) {
+            probs = omega[, t-1] + log(a[, s]) + log(b[s, v[t]])
+            prev[t-1, s] = which.max(probs)
+            omega[s, t] = max(probs)
+        }
+    }
+    
+    S = rep(0, T)
+    last_state = which.max(omega[, ncol(omega)])
+    S[1] = last_state
+    
+    j = 2
+    for (i in (T-1):1){
+        S[j] = prev[i, last_state]
+        last_state = prev[i, last_state]
+        j = j + 1
+    } 
+    
+    S[which(S==1)] = 'up'       # upstream
+    S[which(S==2)] = 'down'     # downstream
+    
+    S = rev(S)
+    
+    return(S)
+}
+
+# initialize our hidden markov model
+M = 2   # hidden states (upstream vs downstream)
+K = 8   # output type - 8 possible outputs
+A = matrix(c(0.9, 0.1, 0.1, 0.9), M, M)     # transition probabilities
+B = matrix(c(0.01, 0.01, 0.02, 0.04, 0.65, 0.15, 0.08, 0.04,
+             0.04, 0.08, 0.15, 0.65, 0.04, 0.02, 0.01, 0.01),
+           M, K, byrow = TRUE)              # emission probabilities
+initial_distribution = c(0.5, 0.5)
+
+# make our hidden markov model
+hmm = Viterbi(as.numeric(obs_states), A, B, initial_distribution)
+
+# plot the result
+plot_df = as.data.frame(cbind(mid_point = data$mid, DI = data$DI, state = hmm))
+ggplot(plot_df, aes(x = as.numeric(as.character(mid_point)),
+                    y = as.numeric(as.character(DI)),
+                    color = as.factor(state))) +
+    geom_point() +
+    labs(y = "Midpoints", x = "DI Score") +
+    ggtitle("Hidden Markov Model Completed Graph") +
+    theme(axis.text.x = element_text(angle = 90, hjust = 0.5)) +
+    geom_col(width = 0.5)
 ```
 
 
@@ -430,48 +573,83 @@ You will explore the following online resources: The NHGRI-EBI GWAS catalog (htt
 
 **IV.1 Explore whether there are genetic variants within the gene BRCA2 which are associated with any traits. What traits are associated with the BRCA2 variants? Which SNP has the smallest p-value related to breast cancer? What is the risk allele?**  
 
-```
-# YOUR ANSWER HERE
+**Answer**:
 
 
-```
-
-**IV.2 For the BRCA2 SNP with the most significant association with breast cancer, what consequence does the risk allele have on the BRCA2 protein sequence? Based on 1000 Genomes in LDLink, what is the allele frequency of the risk allele among the 5 ethnicities In the population with the highest risk in the resource, what is the expected number of people with heterozygous genotype at this SNP, assuming linkage disequilibrium?**  
-
-```
-# YOUR ANSWER HERE
 
 
-```
+
+
+
+
+
+
+
+**IV.2 For the BRCA2 SNP with the most significant association with breast cancer, what consequence does the risk allele have on the BRCA2 protein sequence? Based on 1000 Genomes in LDLink, what is the allele frequency of the risk allele among the 5 ethnicities In the population with the highest risk in the resource, what is the expected number of people with heterozygous genotype at this SNP, assuming linkage disequilibrium?** 
+
+
+**Answer**:
+
+
+
+
+
+
+
+
+
+
 
 **IV.3 Explore a certain SNP, rs4784227, that was reported to be associated with breast cancer. Is it an intergenic, exonic or intronic variant? What gene does it fall in?**  
 
-```
-# YOUR ANSWER HERE
+**Answer**:
 
 
-```
+
+
+
+
+
+
+
+
 
 **IV.4 Explore the SNP rs4784227 in RegulomeDB. What functional category does the rank score (or Regulome DB Score) implicate? What factors does RegulomeDB take into consideration while scoring the potential function of SNPs?**
 
-```
-# YOUR ANSWER HERE
+**Answer**:
 
 
-```
+
+
+
+
+
+
+
 
 **IV.5 Describe the evidence that implicates the regulatory potential of rs4784227, for example, list several transcription factors with binding peaks overlapping this SNP; report the cell types with open chromatin regions overlapping this SNP.**
 
-```
-# YOUR ANSWER HERE
+**Answer**:
 
 
-```
+
+
+
+
+
+
+
 
 **IV.6 [Graduate Students] Read the paper by Cowper-Sal et al. (PMID 23001124) and summarize the potential mechanisms of the above SNP’s function in terms of affecting transcription factor-DNA interaction and regulating genes.**
 
-```
-# YOUR ANSWER HERE
+**Answer**:
 
 
-```
+
+
+
+
+
+
+
+

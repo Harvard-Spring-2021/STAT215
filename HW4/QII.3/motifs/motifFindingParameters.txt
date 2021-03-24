@@ -1,0 +1,1 @@
+cmd = output.txt /n/stat115/2021/HW3/bwa_hg38_index/hg38.fasta motifs
