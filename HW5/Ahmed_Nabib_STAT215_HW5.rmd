@@ -110,13 +110,33 @@ du -sh *
 # making my batch file
 cat ->scrna.sh <<EOF
 #!/bin/bash
+<<<<<<< Updated upstream
 #SBATCH -t 0-10:00
 #SBATCH -c 12
+=======
+<<<<<<< HEAD
+#SBATCH --nodes=1
+#SBATCH --time=10:00:00
+#SBATCH -c 16
+=======
+#SBATCH -t 0-10:00
+#SBATCH -c 12
+>>>>>>> d8d2bb363779f4e41babdc9a627bf6c2434d27d4
+>>>>>>> Stashed changes
 #SBATCH --mem=60G
 
 source /n/stat115/2021/HW5/miniconda3/bin/activate MAESTRO
 snakemake -j 12 --latency-wait 200
 EOF
+<<<<<<< Updated upstream
+=======
+<<<<<<< HEAD
+
+# getting the result txt
+scp stat215u2107@login.rc.fas.harvard.edu:multiome_scrna/Result/QC/scrna_pbmc_granulocyte_sorted_3k_bam_stat.txt scrna_pbmc_granulocyte_sorted_3k_bam_stat.txt
+=======
+>>>>>>> d8d2bb363779f4e41babdc9a627bf6c2434d27d4
+>>>>>>> Stashed changes
 ```
 
 
@@ -149,21 +169,114 @@ snakemake -j 12 --latency-wait 200
 # making my batch file
 cat ->scatac.sh <<EOF
 #!/bin/bash
+<<<<<<< Updated upstream
 #SBATCH -t 0-15:00
 #SBATCH -c 12
+=======
+<<<<<<< HEAD
+#SBATCH --nodes=1
+#SBATCH --time=15:00:00
+#SBATCH -c 16
+=======
+#SBATCH -t 0-15:00
+#SBATCH -c 12
+>>>>>>> d8d2bb363779f4e41babdc9a627bf6c2434d27d4
+>>>>>>> Stashed changes
 #SBATCH --mem=60G
 
 source /n/stat115/2021/HW5/miniconda3/bin/activate MAESTRO
 snakemake -j 12 --latency-wait 200
 EOF
+<<<<<<< Updated upstream
+=======
+<<<<<<< HEAD
+
+# getting the result txt
+scp stat215u2107@login.rc.fas.harvard.edu:multiome_scatac/Result/QC/flagstat.txt flagstat.txt
+
+scp stat215u2107@login.rc.fas.harvard.edu:multiome_scatac/Result/QC/scatac_pbmc_granulocyte_sorted_3k_scATAC_cell_filtering.png scatac_pbmc_granulocyte_sorted_3k_scATAC_cell_filtering.png
+=======
+>>>>>>> d8d2bb363779f4e41babdc9a627bf6c2434d27d4
+>>>>>>> Stashed changes
 ```
 
 **1 Reads mapping stats: After getting the `Result/` output folder, for scRNA-seq run, please copy the content of `multiome_scrna/Result/QC/scrna_pbmc_granulocyte_sorted_3k_bam_stat.txt` below (1 pts;). For the scATAC-seq run, please copy the content of `multiome_scatac/Result/QC/flagstat.txt` below (1 pts;).**
 
+<<<<<<< Updated upstream
+=======
+<<<<<<< HEAD
+**Answer**: Here is the resulting `multiome_scrna/Result/QC/scrna_pbmc_granulocyte_sorted_3k_bam_stat.txt`:
+
+#==================================================
+#All numbers are READ count
+#==================================================
+
+Total records:                          211864897
+
+QC failed:                              0
+Optical/PCR duplicate:                  0
+Non primary hits                        55340229
+Unmapped reads:                         0
+mapq < mapq_cut (non-unique):           15703353
+
+mapq >= mapq_cut (unique):              140821315
+Read-1:                                 0
+Read-2:                                 0
+Reads map to '+':                       82338792
+Reads map to '-':                       58482523
+Non-splice reads:                       122222735
+Splice reads:                           18598580
+Reads mapped in proper pairs:           0
+Proper-paired reads map to different chrom:0
+
+#==================================================
+
+Here is the resulting `multiome_scatac/Result/QC/flagstat.txt`: 
+
+#==================================================
+150362779 + 0 in total (QC-passed reads + QC-failed reads)
+0 + 0 secondary
+15795 + 0 supplementary
+56816207 + 0 duplicates
+142195627 + 0 mapped (94.57% : N/A)
+150346984 + 0 paired in sequencing
+75173492 + 0 read1
+75173492 + 0 read2
+132427806 + 0 properly paired (88.08% : N/A)
+137450532 + 0 with itself and mate mapped
+4729300 + 0 singletons (3.15% : N/A)
+512146 + 0 with mate mapped to a different chr
+197349 + 0 with mate mapped to a different chr (mapQ>=5)
+92444360
+1658444
+49512627
+56549714
+#==================================================
+
+
+**2. Cell Filtering QC plot: Please attach the cell filtering QC plot for the scATAC-seq run, which is saved as `multiome_scatac/Result/QC/scatac_pbmc_granulocyte_sorted_3k_scATAC_read_distr.png` (1 pts;). Please briefly describe what you observed from this figure and how the filtering was affected by the cutoff value you set in the `MAESTRO scatac-init` subcommand (1 pts;).**
+
+**Answer**: Here is the resulting cell filtering QC plot `multiome_scatac/Result/QC/scatac_pbmc_granulocyte_sorted_3k_scATAC_cell_filtering.png` (note the question specified `..read_distr.png` but on slack, it said we should use `cell_filtering.png` instead):
+
+![Cell Filtering QC Plot](scatac_pbmc_granulocyte_sorted_3k_scATAC_cell_filtering.png)
+
+
+
+I observed from this figure that high quality cells are mostly presented at 4-5 on reads passed filter (log 10) and between 0.4-0.8 for fraction of promoter reads. Whereas for low quality cells, they seem to located between 1-3 on reads passed filter (log 10) and scattered for all values of fraction of promoter reads. Our observations on these threshold are caused by our cutoff values set in maestro. 
+
+The filtering was affected by the cutoff value I set in the `MAESTRO scatac-init` subcommand by `--peak-cutoff 100 --count-cutoff 1000 --frip-cutoff 0.2 --cell-cutoff 50`. The `--peak-cutoff` refers to the minimum number of peaks included in each cell (default is 100). The `--count-cutoff` refers to the cutoff for the number of count in each cell (default is 1000). The `--frip-cutoff` refers to the cutoff for fraction of reads in promoter in each cell (default is 0.2). The `--cell-cutoff` refers to the minimum number of cells covered by each peak (default is 10). We choose the default option for all them except for `--cell-cutoff`, which is higher. The higher these cutoff values are, the more strict we are about the quality of our sample. One cutoff very present in our figure is  `--frip-cutoff`, which is set to 0.2. As a result of this cut-off, we see no high qualities less than 0.2, and all them above that threshold. Similar `--count-cutoff` is set to 1000, which in base log10 is 3, so we notice that all our high quality cells are to the right of 3 reads passed filters (log10). Thus by modifying `--frip-cutoff` and `--count-cutoff`, we can define the bounds of where high quality cells can exist in our QC plot.
+
+
+=======
+>>>>>>> Stashed changes
 
 
 
 **2. Cell Filtering QC plot: Please attach the cell filtering QC plot for the scATAC-seq run, which is saved as `multiome_scatac/Result/QC/scatac_pbmc_granulocyte_sorted_3k_scATAC_read_distr.png` (1 pts;). Please briefly describe what you observed from this figure and how the filtering was affected by the cutoff value you set in the `MAESTRO scatac-init` subcommand (1 pts;).**
+<<<<<<< Updated upstream
+=======
+>>>>>>> d8d2bb363779f4e41babdc9a627bf6c2434d27d4
+>>>>>>> Stashed changes
 
 
 
@@ -181,6 +294,27 @@ EOF
   4. You don't have to start from bam files. Any methods are appreciated.
   
 
+<<<<<<< Updated upstream
+=======
+<<<<<<< HEAD
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=======
+>>>>>>> d8d2bb363779f4e41babdc9a627bf6c2434d27d4
+>>>>>>> Stashed changes
 ### Part II. Single-cell RNA-seq (Undergraduate level Starts from here)
 
   - Create a scRNA-seq Seurat Object
@@ -213,7 +347,15 @@ library(tidyverse)
 # copy the files to local server
 scp stat215u2107@login.rc.fas.harvard.edu:/n/stat115/2021/HW5/data/scrna_pbmc_granulocyte_sorted_3k_scRNA_Object.rds 'scrna_pbmc_granulocyte_sorted_3k_scRNA_Object.rds'
 
+<<<<<<< Updated upstream
 scp stat215u2107@login.rc.fas.harvard.edu:/n/stat115/2021/HW5/data/scrna_pbmc_granulocyte_sorted_3k_scRNA_Object.rds 'scrna_pbmc_granulocyte_sorted_3k_scRNA_Object.rds'
+=======
+<<<<<<< HEAD
+scp stat215u2107@login.rc.fas.harvard.edu:/n/stat115/2021/HW5/data/scatac_pbmc_granulocyte_sorted_3k_scATAC_Object.rds 'scatac_pbmc_granulocyte_sorted_3k_scATAC_Object.rds'
+=======
+scp stat215u2107@login.rc.fas.harvard.edu:/n/stat115/2021/HW5/data/scrna_pbmc_granulocyte_sorted_3k_scRNA_Object.rds 'scrna_pbmc_granulocyte_sorted_3k_scRNA_Object.rds'
+>>>>>>> d8d2bb363779f4e41babdc9a627bf6c2434d27d4
+>>>>>>> Stashed changes
 ```
 
 ```{r}
@@ -235,6 +377,13 @@ rna
 **Answer**: For part (1), calculating the percentage of UMIs mapped to the mitochondrial genes, I used `PercentageFeatureSet`. Then for part (2), I used `VlnPlot` to visualize the distribution of `nFeature_RNA`, `nCount_RNA` and `percent.mt` in a single violin plot. I noticed for some of the violin plots, there are extreme values so it may be useful to use a cut-off threshold. For part (3), I found 1337 cells have mitochondrial rate > 20%; I print out a table of the first 5 sequences.
 
 ```{r}
+<<<<<<< Updated upstream
+=======
+<<<<<<< HEAD
+rna[["orig.ident"]] = "pbmc" # friendly labels for plots
+=======
+>>>>>>> d8d2bb363779f4e41babdc9a627bf6c2434d27d4
+>>>>>>> Stashed changes
 Idents(rna) <- rna$orig.ident
 
 # part 1: calculating the percentage of UMIs mapped to the mitochondrial genes
@@ -252,21 +401,102 @@ head(above20, 5)
 
 **3. After removing unwanted cells from the dataset (already done by MAESTRO. No need to filter in this homework), the next step is to normalize the data. Please use the default settings in Seurat to do the normalization: `NormalizeData()` (1 pts;). We next calculate a subset of features that exhibit high cell-to-cell variation in the data set. These features will be used for downstream analysis to reduce computing time. Please use `FindVariableFeatures(..., selection.method = "vst", nfeatures = 2000)` to return the top 2,000 variable features (1 pts;).  Next, we will apply a linear transformation (also known as scaling), a standard pre-processing step prior to dimensional reduction techniques. Please perform scaling on the top 2,000 variable genes (default) using `ScaleData()` (1 pts;).**
 
+<<<<<<< Updated upstream
 ```{r}
 
+=======
+<<<<<<< HEAD
+**Answer**: For part (1): I use `NormalizeData()` to perform normalization. For part (2): I find the top 2,000 variable features using `FindVariableFeatures()`. For part (3): I perform scaling using `ScaleData()`. 
+
+```{r}
+# part 1: normalization
+rna = NormalizeData(rna)
+
+# part 2: find the top 2,000 variable features
+rna = FindVariableFeatures(rna, selection.method = "vst", nfeatures = 2000)
+
+# part 3: scaling
+rna = ScaleData(rna) # in OH, don't use features to avoid getting wrong PC variances
+=======
+```{r}
+
+>>>>>>> d8d2bb363779f4e41babdc9a627bf6c2434d27d4
+>>>>>>> Stashed changes
 ```
 
 
 **4. Perform linear dimensional reduction. Next, we'll perform PCA on the scaled data. Please use `RunPCA()` to do the dimension reduction on the 2,000 variable genes we detected in the previous question (1 pts;). You can take a look at PCA cell embeddings at `rna[['pca']]@cell.embeddings`.**
 
+<<<<<<< Updated upstream
 ```{r}
 
+=======
+<<<<<<< HEAD
+**Answer**: I perform dimension reduction on the 2,000 variable genes with `RunPCA()`. I don't print out the values of the PCA cell embeddings because it's a long print out.
+
+```{r}
+rna = RunPCA(rna, features = VariableFeatures(object = rna))
+# head(rna[['pca']]@cell.embeddings, 5)
+=======
+```{r}
+
+>>>>>>> d8d2bb363779f4e41babdc9a627bf6c2434d27d4
+>>>>>>> Stashed changes
 ```
 
 **5. Since not all the PCs we calculated will be used in downstream analysis. In this question, We will  determine how many PCs we should use in downstream analysis:**
 
   - **5.1 How much variability is explained in each of the first 50PCs? Please show a scree plot with each PCs on the x-axis and variation explained by each PC on the y-axis (1 pts;).**
   - **hint** : https://github.com/satijalab/seurat/issues/982
+<<<<<<< Updated upstream
+=======
+<<<<<<< HEAD
+  
+  - **Answer**: To understand how many PCs we should use, I made a scree plot to determine how much variation is explained by each PC. I found that the first few PCs explain much more variance than the later PCs.
+```{r}
+# using code from the hint
+# accessing pca
+mat = Seurat::GetAssayData(rna, assay = "RNA", slot = "scale.data")
+pca = rna[["pca"]]
+
+# total variance and variance explained
+total_variance = sum(matrixStats::rowVars(mat))
+eigValues = (pca@stdev)^2
+varExplained = eigValues / total_variance
+```
+
+```{r}
+# make scree plot
+plot_df = data.frame(PC = c(1:50), varExplained)
+ggplot(plot_df, aes(x = PC, y = varExplained)) +
+  geom_point(size = 1) +
+  geom_line() +
+  xlab("PC") +
+  ylab("Variance Explained") +
+  labs(title="Scree Plot")
+```
+
+  - **5.2 How many PCs do you need to cover 20% of the total variance? Show a bar plot with PCs on the x-axis and the cumulative sum of variance explained by each PC on the y-axis (1 pts;). In bulk RNA-seq experiments, can you recall how many PCs you need to explain 20% of the variability? What do you think is the main reason that causes such difference between single-cell and bulk RNA-seq (Graduate level 2 pts;)?**
+  
+  - **Answer**: For part (1): I found that I need 31 PCs to cover 20% of the total variance. For part (2): In bulk RNA-seq experiments, I only needed 1-2 PCs to explain 20% of the variability (went back to HW2 and checked the scree plots - in problem II.2 for HW2, we saw that 90% of variance was captured in 25 PCs, with the first few PCs capturing more than 20%). The main reason that causes such difference between single-cell and bulk RNA-seq is the sample size. As TF Phillip described in OH, if we had $k$ samples, then $k$ PCs are enough to capture 100% of the variance. In the bulk RNA-seq experiment from HW2, part II, we had a 100 samples, whereas in this problem, we have 2633 samples (thus we'd need more PCs to capture the same level of explained variance).
+  
+```{r}
+# part 1: cumulative sum of variance explained plot
+cumVariance = cumsum(varExplained)
+plot(cumVariance, main="Cumulative % Variance Captured",
+     xlab="PC", ylab="Cumulative % Variance")
+abline(h=0.2, col="red", lty=2)
+abline(v=31, col="blue", lty=3)
+```
+
+  - **5.3 What are The top 5 genes with the most positive and negative coefficients in each of the first 10 PCs? Use a table to show the results (1 pts;).**
+  
+  - **Answer**: The table below shows the top 5 genes with the most positive and negative coefficients in each of the first 10 PCs.
+
+```{r}
+print(rna[["pca"]], dims = 1:10, nfeatures = 5)
+=======
+>>>>>>> Stashed changes
     
 ```{r}
 
@@ -284,11 +514,35 @@ head(above20, 5)
 ```{r}
 
 
+<<<<<<< Updated upstream
+=======
+>>>>>>> d8d2bb363779f4e41babdc9a627bf6c2434d27d4
+>>>>>>> Stashed changes
 ```
 
 **6. Umap Visualization: Dimensionality reduction is a powerful tool for machine learning practitioners to visualize and understand large, high-dimensional datasets. Seurat offers several non-linear dimension reduction techniques, such as tSNE and UMAP (as opposed to PCA which is a linear dimensional reduction technique). UMAP is a new technique by McInnes et al. that offers many advantages over t-SNE, most notably increased speed and better preservation of the data's global structure.**
 
   - **6.1 Use the first 15 PCs, apply `RunUMAP()` to perform non-linear dimension reduction for visualization. The results will be stored in `rna[['umap]]` (1 pts;).**
+<<<<<<< Updated upstream
+=======
+<<<<<<< HEAD
+  
+  - **Answer**: Used `RunUMAP()` on first 15 PCs.
+
+```{r}
+rna = RunUMAP(rna, dims = 1:15)
+```
+
+  - **6.2 Please Visualize the cells on the PCA and UMAP embeddings individually (2 pts;) and comment on the number of cell clusters that appear in each plot (1 pts;). hint: Use `DimPlot()`. Describe the difference between PCA and UMAP on 2D plots (2 pts;).**
+  
+  - **Answer**: Part (1): I visualized the cells on the PCA and UMAP embeddings with `DimPlot()`. Part (2): For the PCA visualization, it seems like there are 2 primary clusters (one on the left and one on the right) however there is scatter in between them. For the UMAP visualization, the clusters are tighter - there seems to be 5 distinct clusters (3 are fairly big and 2 are very small). Part (3): the big difference between PCA and UMAP on 2D plots is scatter and tightness of the cluster; the UMAP 2D plot has less scatter and the clusters are very visibly clear whereas for the PCA 2D plot, there fair bit of scatter of the points. The reason for this might be because PCA is a linear projection, which means it can't capture non-linear dependencies, whereas UMAP is a non-linear projection that is very effective for visualizing clusters or groups of data points and their relative proximity.  
+
+```{r}
+# part (1): Visualized the cells on the PCA and UMAP embeddings
+DimPlot(rna, reduction = "pca") + ggtitle("PCA Plot")
+DimPlot(rna, reduction = "umap") + ggtitle("UMAP Plot")
+=======
+>>>>>>> Stashed changes
 
 ```{r}
 
@@ -300,35 +554,137 @@ head(above20, 5)
 ```{r}
 
 
+<<<<<<< Updated upstream
+=======
+>>>>>>> d8d2bb363779f4e41babdc9a627bf6c2434d27d4
+>>>>>>> Stashed changes
 ```
 
 **7. Clustering: Seurat v3 applies a graph-based clustering approach, building upon initial strategies from Macosko et al.. To cluster the cells, we first construct a KNN graph based on the euclidean distance in PCA space and refine the edge weights between any two cells based on the shared overlap in their local neighborhoods (Jaccard similarity).**
 
   - **7.1 Use the `FindNeighbors()` function and take first 15 PCs as input to perform KNN (1 pts;).**
+<<<<<<< Updated upstream
+=======
+<<<<<<< HEAD
+  
+  - **Answer**: Used the `FindNeighbors()` function on first 15 PCs.
+
+```{r}
+rna = FindNeighbors(rna, dims = 1:15)
+=======
+>>>>>>> Stashed changes
 
 ```{r}
 
 
+<<<<<<< Updated upstream
+=======
+>>>>>>> d8d2bb363779f4e41babdc9a627bf6c2434d27d4
+>>>>>>> Stashed changes
 ```
 
   - **7.2 We next apply modularity optimization techniques to iteratively group cells together. Use `FindClusters()` function with different `resolution` to perform clustering and draw the resulting clusters in different colors on UMAP (`resolution` = 0.4, 0.6, 0.8) (3 pts;).** 
   
+<<<<<<< Updated upstream
 ```{r}
 
 
+=======
+<<<<<<< HEAD
+  - **Answer**: Plotted for all three resolutions. I noticed with increased resolution, there are more clusters.
+  
+```{r}
+rna = FindClusters(rna, resolution = 0.4)
+DimPlot(rna, reduction = "umap", label=TRUE, label.size = .6) +
+  ggtitle("Resolution 0.4")
+
+rna = FindClusters(rna, resolution = 0.6)
+DimPlot(rna, reduction = "umap", label=TRUE, label.size = .6) +
+  ggtitle("Resolution 0.6")
+
+rna = FindClusters(rna, resolution = 0.8)
+DimPlot(rna, reduction = "umap", label=TRUE, label.size = .6) +
+  ggtitle("Resolution 0.8")
+=======
+```{r}
+
+
+>>>>>>> d8d2bb363779f4e41babdc9a627bf6c2434d27d4
+>>>>>>> Stashed changes
 ```
 
 
 
   - **7.3 How does resolution influence the number of clusters and the number of cells assigned to each cluster? Please provide a table to show the number of cells in each cluster (Graduate 1 pts;). Is there a correct number of clusters in a particular data set? why or why not (Graduate level 1pts;)?**
   
+<<<<<<< Updated upstream
 ```{r}
 
 
+=======
+<<<<<<< HEAD
+  - **Answer**: Part (1): Analyzing the plots from 7.2, I noticed as resolution increased, the number of clusters increased. For resolution 0.4, it was 12 clusters, for resolution 0.6, it was 13 clusters, and for resolution 0.8, it was 14 clusters (the table below displays this information). As there are more clusters, we'd expect generally less cells to be assigned to each cluster. We see that visually as the clusters become smaller in the plot from 7.2 and in the table, the values per cluster generally decrease as the number of clusters increase. Part (2): The correct number of clusters is in fact an active area of research, and there are no hard and fast rules on the right number. It depends on the data set and objective. For example, Prof. Liu mentioned that a general rule is 7 clusters, however it can vary - if we know something in particular (like the number of batches or tissue types), we can perhaps use that information to inform our cluster number, but there will always be noise or other factors which may affecting the clustering. In practice, we try multiple number of clusters, use visualizations to inform how effective our clustering, and perhaps define a criteria on optimize on. And we may get different conclusions depending on which dimension reduction we use or criteria we choose, thus finding a correct number of clusters really depends. In general however, too many clusters results in over-fitting (with clusters being very sensitive to noise) whereas too few clusters results in under-fitting (with clusters not really finding patterns).
+  
+```{r}
+# table of clusters and the number of cells, resolution = 0.4
+table(rna@meta.data$RNA_snn_res.0.4)
+
+# table of clusters and the number of cells, resolution = 0.6
+table(rna@meta.data$RNA_snn_res.0.6)
+
+# table of clusters and the number of cells, resolution = 0.8
+table(rna@meta.data$RNA_snn_res.0.8)
+=======
+```{r}
+
+
+>>>>>>> d8d2bb363779f4e41babdc9a627bf6c2434d27d4
+>>>>>>> Stashed changes
 ```
 
 **8. Find Cluster Markers: For further analysis, please keep using resolution = 0.6 to cluster the cells. Seurat has a function called `FindMarkers()` that can perform several tests to identify differentially expressed genes for a single cluster.**
 
+<<<<<<< Updated upstream
+=======
+<<<<<<< HEAD
+  - **8.1 Use Wilcox Rank Sum test (default) in `FindMarkers(..., min.pct = 0.25)` to identify all markers of cluster 5 (1 pts;). Print the top 5 markers in cluster 5. hints: You need to rerun `FindClusters()` with resolution = 0.6 to get correct number of cell clusters.**
+  
+  - **Answer**: Printed the top 5 markers in cluster 5.
+
+```{r}
+# hint: rerun `FindClusters()` with resolution = 0.6
+rna = FindClusters(rna, resolution = 0.6)
+
+# Identifying top 5 markers in cluster 5 
+head(FindMarkers(rna, ident.1 = 5, min.pct = .25), 5)
+```
+
+  - **8.2 `FindAllMarkers()` function can find markers for every cluster compared to all remaining cells (one vs. the rest). Apply `FindAllMarkers()` function with `min.pct = 0.25` and `logfc.threshold = 0.25` to report only positive genes in each cluster (1 pts;). Please print top 2 markers in each cluster weighted by log2FC (1pts;).**
+  
+  - **Answer**: Part (1): Used `FindAllMarkers()` and Part (2): printed top 2 markers in each cluster weighted by log2FC.
+
+```{r}
+# part (1): find markers for every cluster compared to all remaining cells
+rna.markers = FindAllMarkers(rna, only.pos = TRUE, 
+                             min.pct = 0.25, 
+                             logfc.threshold = 0.25)
+
+# part (2): print top 2 markers in each cluster weighted by log2FC
+rna.top.markers = rna.markers %>% 
+  group_by(cluster) %>% 
+  top_n(n = 2, wt = avg_log2FC)
+
+rna.top.markers
+```
+
+  - **8.3 Visualize the gene expression values of these potential markers (top2) on your UMAP plots using `FeaturePlot()` (2 pts;).**
+  
+  - **Answer**: I used `FeaturePlot()` to visualize the top 2 potential markers from 8.2. I see these markers are quite differentially expressed in our UMAP plots. 
+
+```{r , fig.height = 16, fig.width = 12}
+FeaturePlot(rna, feature = rna.top.markers$gene)
+=======
+>>>>>>> Stashed changes
   - **8.1 Use Wilcox Rank Sum test (default) in `FindMarkers(..., min.pct = 0.25)` to identify all markers of cluster 5 (1 pts;). Print the top5 markers in cluster 5. hints: You need to rerun `FindClusters()` with resolution = 0.6 to get correct number of cell clusters.**
 
 ```{r}
@@ -345,14 +701,48 @@ head(above20, 5)
 
 ```{r , fig.height = 16, fig.width = 12}
 
+<<<<<<< Updated upstream
+=======
+>>>>>>> d8d2bb363779f4e41babdc9a627bf6c2434d27d4
+>>>>>>> Stashed changes
 ```
 
 **9. Annotation: Based on markers in each cluster, MAESTRO referenced human.immune.CIBERSORT data to do the cell type annotations. The annotated cell types are stored in the `assign.ident` column in Seurat metadata. Please set `Idents(rna) <- rna$assign.ident` and plot the cell type annotation results in UMAP (1 pts;)**
 
+<<<<<<< Updated upstream
+=======
+<<<<<<< HEAD
+**Answer**: I notice this UMAP 2D plot presents a different cluster scheme - this plot has 8 clusters with labels.
+
+```{r}
+# set `Idents(rna) <- rna$assign.ident`
+Idents(rna) <- rna$assign.ident
+
+# plot the cell type annotation results in UMAP
+DimPlot(rna, reduction="umap", label = TRUE, pt.size = .6)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+=======
+>>>>>>> Stashed changes
 ```{r}
 
 ```
 
+<<<<<<< Updated upstream
+=======
+>>>>>>> d8d2bb363779f4e41babdc9a627bf6c2434d27d4
+>>>>>>> Stashed changes
 ### Part III. Single-cell ATAC-seq
   - Create a scATAC-seq Seurat Object
   - Data Normalization and Dimension Reduction
@@ -368,24 +758,83 @@ library(dplyr)
 library(Seurat)
 library(Signac)
 library(ggplot2)
+<<<<<<< Updated upstream
 
+=======
+<<<<<<< HEAD
+=======
+
+>>>>>>> d8d2bb363779f4e41babdc9a627bf6c2434d27d4
+>>>>>>> Stashed changes
 ```
 
 **1. Read the multiome scATAC-seq Seurat object: Same as scRNA-seq .rds file, we need to extract Seurat object from .rds data list. How many assays are stored in this Seurat object and what is the current active assay (1 pts;)? Now switch the default assay to 'ATAC' using `DefaultAssay(atac) <- 'ATAC'`. How many cells and peaks are retained in the peak count matrix (1 pts;)? Important note: Please use `Idents(atac) <- atac$orig.ident` to update the cell ID before moving to Question 2. **
 
+<<<<<<< Updated upstream
 ```{r}
 
+=======
+<<<<<<< HEAD
+**Answer**: Part (1): there are 2 assays stored in this Seurat object (named ACTIVITY and ATAC). When we first load the .rds file, the active assay is ACTIVITY, however we then change it to the ATAC assay. Part (2): I observe 2664 cell samples and 44292 peaks. 
+
+```{r}
+=======
+```{r}
+
+>>>>>>> d8d2bb363779f4e41babdc9a627bf6c2434d27d4
+>>>>>>> Stashed changes
 atac<- readRDS("scatac_pbmc_granulocyte_sorted_3k_scATAC_Object.rds")
 atac<-atac$ATAC
 atac
 Idents(atac) <- atac$orig.ident
 DefaultAssay(atac) <- 'ATAC'
+<<<<<<< Updated upstream
 
+=======
+<<<<<<< HEAD
+atac
+=======
+
+>>>>>>> d8d2bb363779f4e41babdc9a627bf6c2434d27d4
+>>>>>>> Stashed changes
 ```
 
 **2. Normalization and Linear Dimensional Reduction: scATACseq data are very sparse. It is sparser than scRNAseq. Thus, It is necessary to do pre-processing steps before clustering scATACseq data. Signac performs a two-step normalization method called [TF-IDF](https://divingintogeneticsandgenomics.rbind.io/post/clustering-scatacseq-data-the-tf-idf-way/) (term frequency-inverse document frequency). To get rid of the low dynamic range of scATAC-seq data, we further use `FindTopFeatures()` to only choose the top n% of features (peaks) for dimension reduction. Next, we run SVD (singular value decomposition)  on the normalized TD-IDF matrix for linear dimensional reduction. The combined steps of TF-IDF followed by SVD are also known as LSI (latent semantic indexing).**
   
   - **2.1: Before performing normalization, let's plot a UMAP on the first 15 PCs to see how the plot looks(1 pts;). hints: Same as we have done in scRNA-seq analysis, do `ScaleData()` and `RunPCA()` (Running PCA will take some time), then `RunUMAP(..., reduction = 'pca', dims =1:15)`. Plot the UMAP. Does this UMAP look good? Leave a brief comment on what you have observed (1 pts;). We will perform normalization later and you can compare their differences.**
+<<<<<<< Updated upstream
+=======
+<<<<<<< HEAD
+  
+  - **Answer**: Part (1): I plotted a UMAP on the first 15 PCs after scaling and running PCA. Part (2): This UMAP seems to show two some divisions (one on the left and one on the right of vertical line along UMAP_1 = 0). Within these divisions, it seems we can find further clusters, like in the right division, we can separate the top and bottom as clusters, however for the left division, it's not so clear where another cluster separation could be. In general, there seems to be scatter in the points.
+
+```{r, results = 'hide'}
+# scaling
+atac =  ScaleData(atac)
+
+# PCA
+atac = RunPCA(atac, features = VariableFeatures(object = atac))
+```
+
+```{r}
+# UMAP
+atac = RunUMAP(atac, reduction = 'pca', dims = 1:15)
+
+# plot
+DimPlot(atac, reduction = "umap")
+```
+
+
+  - **2.2: Let's apply `RunTFIDF()`, `FindTopFeatures(..., min.cutoff = 'q0')`, and `RunSVD()` sequentially to do the normalization and linear dimension reduction (1 pts;). After running SVD, you will find the cell embedding information under `atac[['lsi']]`**
+  
+  - **Answer**: Performed normalization and linear dimension reduction. I don't print out the resulting embedding because it's very verbose.
+  
+```{r}
+atac = RunTFIDF(atac)
+atac = FindTopFeatures(atac, min.cutoff = 'q0')
+atac = RunSVD(atac)
+=======
+>>>>>>> Stashed changes
 
 ```{r}
 
@@ -395,19 +844,62 @@ DefaultAssay(atac) <- 'ATAC'
 ```{r}
 
 
+<<<<<<< Updated upstream
+=======
+>>>>>>> d8d2bb363779f4e41babdc9a627bf6c2434d27d4
+>>>>>>> Stashed changes
 ```
 
   - **2.3: Let's use `DepthCor()` to measure the correlation of sequencing depth with each LSI component (1 pts;). Did you observe any strong correlation in this plot (1 pts;)?**
   
+<<<<<<< Updated upstream
 ```{r}
 
 
+=======
+<<<<<<< HEAD
+  - **Answer**: Part (1): viewing the embeddings from part 2.2, I saw there were 50 LSI components - to avoid clutter, I only plot the first 25 because after that, the correlation stays around 0. Part (2): I notice the first component has a very strong/high correlation around 1, followed by the fifth component with roughly -0.60 correlation. The other components have low correlation values, with components 10 onward hovering around 0 correlation.
+  
+```{r}
+DepthCor(object = atac, n = 25)
+=======
+```{r}
+
+
+>>>>>>> d8d2bb363779f4e41babdc9a627bf6c2434d27d4
+>>>>>>> Stashed changes
 ```
 
 **3. Non-Linear Dimension Reduction and Clustering: Like scRNA-seq analysis, we will project the cell on a 2D plot using UMAP and do the clustering.**
 
   - **3.1 Run UMAP dimension reduction on 2:30 LSI components (1 pts;) and plot the UMAP on a 2D graph (1 pts;). Compared to the UMAP you got from question 2.1 (without normalization), does this UMAP looks better? Leave your comment below (1 pts;).**
   
+<<<<<<< Updated upstream
+=======
+<<<<<<< HEAD
+  - **Answer**: Part (1): Ran UMAP on 2:30 LSI components. Part (2): made a 2D plot. Part (3): Comparing to the UMAP I got from question 2.1 (without normalization), I see more clearly defined clusters with less scatter of points. Thus I would say this UMAP looks better.
+  
+```{r}
+# Part (1): Ran UMAP on 2:30 LSI components
+atac = RunUMAP(atac, reduction = 'lsi', dims = 2:30)
+
+# Part (2): made a 2D plot
+DimPlot(atac, reduction = "umap")
+```
+
+  - **3.2 Use the same dimension (reduction = 'lsi', dims = 2:30) to perform KNN `FindNeighbors()`, cluster the cells with `resolution = 0.6 and algorithm = 3` (1 pts;), and visualize the clustering results on a UMAP embedding (1 pts;). How many clusters did you get (1 pts;)? **
+  
+  - **Answer**: Part (1): Performed KNN with `FindNeighbors()` and `FindClusters()`. Part (2): Made a visualization. Part (3): I notice I got 11 clusters.
+
+```{r}
+# Part (1): Performed KNN 
+atac = FindNeighbors(atac, reduction = 'lsi', dims = 2:30)
+atac = FindClusters(atac, resolution = 0.6, algorithm = 3)
+
+# Part (2): visualization
+DimPlot(atac, reduction = 'umap', label=TRUE)
+=======
+>>>>>>> Stashed changes
 ```{r}
 
 
@@ -418,37 +910,117 @@ DefaultAssay(atac) <- 'ATAC'
 ```{r}
 
 
+<<<<<<< Updated upstream
+=======
+>>>>>>> d8d2bb363779f4e41babdc9a627bf6c2434d27d4
+>>>>>>> Stashed changes
 ```
 
   - **3.3 MAESTRO performed cell type annotation and stored the information as `assign.ident` in metadata. Please use `Idents()` to change the cell id as cell type labels and plot the cell annotation in UMAP (1 pts;). How many cell types did you get (1 pts)?**
   
+<<<<<<< Updated upstream
 ```{r}
 
 
+=======
+<<<<<<< HEAD
+  - **Answer**: Part (1): used `Idents()` to change the cell id and plotted. Part (2): I found 7 cell types (more details in the key of the plot).
+  
+```{r}
+# part (1): idents and plot
+Idents(object = atac) <- atac$assign.ident
+DimPlot(atac, reduction="umap", label = TRUE, pt.size = .6)
+=======
+```{r}
+
+
+>>>>>>> d8d2bb363779f4e41babdc9a627bf6c2434d27d4
+>>>>>>> Stashed changes
 ```
 
 **4. Differentially accessible peaks: To find differentially accessible regions between clusters of cells, we can perform a differential accessibility (DA) test.**
 
   - **4.1 Let's compare CD8T cells and B cells to find differentially accessible peaks (1 pts;). hint: use `FindMarkers(..., min.pct = 0.2, test.use = 'LR')`. Print the top5 regions differentially expressed between CD8T and B cells (1 pts;).**
+<<<<<<< Updated upstream
 
 ```{r}
 
+=======
+<<<<<<< HEAD
+  
+  - **Answer**: Print out of the top 5 regions differentially expressed between CD8T and B cells below.
+
+```{r}
+atac.markers = FindMarkers(atac, ident.1 = "CD8T", ident.2 = "B",
+                           min.pct = 0.2, test.use = "LR")
+head(atac.markers, 5)
+=======
+
+```{r}
+
+>>>>>>> d8d2bb363779f4e41babdc9a627bf6c2434d27d4
+>>>>>>> Stashed changes
 ```
 
   - **4.2 Use Violin plot to show the first DA peaks in the last question. Pleas show a violin plot with CD8T and B cell types on the x-axis, and expression level on the y-axis (1 pts;).**
   
+<<<<<<< Updated upstream
+=======
+<<<<<<< HEAD
+  - **Answer**: Plot below - we only want to show the first peak. From the plot, we see higher expression level for B type.
+  
+```{r}
+VlnPlot(atac, features = rownames(atac.markers)[1], idents = c("CD8T", "B"))
+```
+
+**5. Based on the peak count matrix (assay 'ATAC'), MAESTRO created a gene activity matrix according to [regulatory potential model](https://github.com/liulab-dfci/MAESTRO/blob/master/example/Gene_activity_modelling/Gene_activity_modelling.md). This matrix is stored as 'ACTIVITY' assay under Seurat object. Please switch the default assay to 'ACTIVITY' using `DefaultAssay(atac) <- 'ACTIVITY'`, Normalize and scale the gene activity matrix by using `NormalizeData()` (1 pts;). This gene activity matrix will be used for label transferring later.**
+
+**Answer**: Normalization and scaling complete.
+=======
+>>>>>>> Stashed changes
 ```{r}
 
 ```
 
 **5. Based on the peak count matrix (assay 'ATAC'), MAESTRO created a gene activity matrix according to [regulatory potential model](https://github.com/liulab-dfci/MAESTRO/blob/master/example/Gene_activity_modelling/Gene_activity_modelling.md). This matrix is stored as 'ACTIVITY' assay under Seurat object. Please switch the default assay to 'ACTIVITY' using `DefaultAssay(atac) <- 'ACTIVITY'`, nNormalize and scale the gene activity matrix by using `NormalizeData()` (1 pts;). This gene activity matrix will be used for label transferring later.**
+<<<<<<< Updated upstream
+=======
+>>>>>>> d8d2bb363779f4e41babdc9a627bf6c2434d27d4
+>>>>>>> Stashed changes
 
 ```{r}
 DefaultAssay(atac) <- 'ACTIVITY'
 
+<<<<<<< Updated upstream
 
 ```
 
+=======
+<<<<<<< HEAD
+# normalize
+atac = NormalizeData(atac)
+
+# scale
+atac = ScaleData(atac)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+=======
+
+```
+
+>>>>>>> d8d2bb363779f4e41babdc9a627bf6c2434d27d4
+>>>>>>> Stashed changes
 ### Part IV. Integrating scRNA-seq and scATAC-seq data
 
   - Integrative analysis of multiome scRNA-seq and scATAC-seq
@@ -459,11 +1031,41 @@ DefaultAssay(atac) <- 'ACTIVITY'
 
 ```{r}
 library(circlize)
+<<<<<<< Updated upstream
 
+=======
+<<<<<<< HEAD
+library(cowplot)
+=======
+
+>>>>>>> d8d2bb363779f4e41babdc9a627bf6c2434d27d4
+>>>>>>> Stashed changes
 ```
 
 **1. When we pre-processed scRNA and scATAC separately by MAESTRO, some low-quality cells were filtered out during the analysis (Recall Part I. Question 2). In this Part, let's work on the cells common in single-cell gene expression and ATAC profiles. How are we going to pair the cells if they have different cell barcodes in scRNA and scATAC data (use `colnames()` to explore)? 10X multiome data provides two separate lists of barcodes (barcode whitelist we used for barcode correction in MAESTRO): one for gene expression and another for ATAC. Please download two barcodes lists from `/n/stat115/2021/HW5/references/whitelist/atac/737K-arc-v1.txt` and `/n/stat115/2021/HW5/references/whitelist/rna/737K-arc-v1.txt`to your local computer.**
 
+<<<<<<< Updated upstream
+=======
+<<<<<<< HEAD
+```{bash, eval=FALSE}
+# copy the files to local server
+scp stat215u2107@login.rc.fas.harvard.edu:/n/stat115/2021/HW5/references/whitelist/atac/737K-arc-v1.txt 'atac_737K-arc-v1.txt'
+
+scp stat215u2107@login.rc.fas.harvard.edu:/n/stat115/2021/HW5/references/whitelist/rna/737K-arc-v1.txt 'rna_737K-arc-v1.txt'
+```
+
+  - **1.1 Though listed in two separate files, The positional encoding of the barcodes in two files indicates the pairing, which means they have the same length, and you can match the cells from RNA to ATAC side by side. Now, Please match the scRNA-seq and scATAC-seq barcodes to find the list of common cells (2 pts;). How many cells are in common (1 pts;)?**
+  
+  - **Answer**: Part (1): To match the scRNA-seq and scATAC-seq barcodes, I use `intersect`. Part (2): I find 2534 cells in common.
+
+```{r}
+#Read multiome scatac-seq cell barcodes
+atac_whitelist<- read_tsv("atac_737K-arc-v1.txt", col_names = FALSE)
+
+#Read multiome scrna-seq cell barcodes
+rna_whitelist<- read_tsv("rna_737K-arc-v1.txt", col_names = FALSE)
+=======
+>>>>>>> Stashed changes
   - **1.1 Though listed in two separate files, The positional encoding of the barcodes in two files indicates the pairing, which means they have the same length, and you can match the cells from RNA to ATAC side by side. Now, Please match the scRNA-seq and scATAC-seq barcodes to find the list of common cells (2 pts;). How many cells are in common (1 pts;)?**
 
 ```{r}
@@ -472,6 +1074,10 @@ atac_whitelist<- read_tsv("atac/737K-arc-v1.txt", col_names = FALSE)
 
 #Read multiome scrna-seq cell barcodes
 rna_whitelist<- read_tsv("rna/737K-arc-v1.txt", col_names = FALSE)
+<<<<<<< Updated upstream
+=======
+>>>>>>> d8d2bb363779f4e41babdc9a627bf6c2434d27d4
+>>>>>>> Stashed changes
 
 
 #Match scatac barcodes whitelists with scrna barcodes whitelist
@@ -481,6 +1087,23 @@ atac_barcode <- as.character(barcode_map[Cells(rna)])
 renamed_rna.obj <- RenameCells(object = rna,new.names = atac_barcode)
 
 #Find Overlapped cells between rna and atac
+<<<<<<< Updated upstream
+=======
+<<<<<<< HEAD
+common = intersect(Cells(atac), Cells(renamed_rna.obj))
+length(common)
+```
+
+  - **1.2 Please use the list of common cells to subset scRNA and scATAC Seurat object (2 pts;). We will use these sub-sampled Seurat objects for the rest of the homework. hint: use `subset()` **
+  
+  - **Answer**: Used the common cells from 1.1 to subset the scRNA and scATAC Seurat object.
+
+```{r}
+#Taking common subset of scRNA-seq and scATAC-seq
+rna = subset(renamed_rna.obj, cells = common)
+atac = subset(atac, cells = common)
+=======
+>>>>>>> Stashed changes
 ```
 
   - **1.2 Please use the list of common cells to subset scRNA and scATAC Seurat object (2 pts;). We will use these sub-sampled Seurat objects for the rest of the homework. hint: use `subset()` **
@@ -490,12 +1113,54 @@ renamed_rna.obj <- RenameCells(object = rna,new.names = atac_barcode)
 #Taking common subset of scRNA-seq and scATAC-seq
 
 
+<<<<<<< Updated upstream
+=======
+>>>>>>> d8d2bb363779f4e41babdc9a627bf6c2434d27d4
+>>>>>>> Stashed changes
 ```
 
 
 **2. Label Transferring: In Part III Question 3.3, we displayed a UMAP with cell type annotated by MAESTRO. You probably have noticed that the annotation result is not promising. In this section, let's use the label transferring methods from Seurat to redo the cell annotation. You can find the detailed tutorial from [Seurat](https://satijalab.org/seurat/articles/atacseq_integration_vignette.html).**
 
   - **2.1 First, let's identify anchors between scATAC-seq data set and scRNA-seq data set (1 pts;). Set `DefaultAssay()` as 'ACTIVITY' for scATAC object. In `FindTransferAnchors()`, set 'RNA' as reference assay and 'ACTIVITY' as query assay.**
+<<<<<<< Updated upstream
+=======
+<<<<<<< HEAD
+  
+  - **Answer**: I identified the anchors between scATAC-seq data set and scRNA-seq data set using the specified `R` commands. 
+
+```{r}
+# Set `DefaultAssay()` as 'ACTIVITY' for scATAC object
+DefaultAssay(atac) <- 'ACTIVITY'
+
+# doing `FindTransferAnchors()`
+# source: https://github.com/satijalab/seurat/issues/1078
+anchors = FindTransferAnchors(reference = rna, query = atac, 
+                              features = VariableFeatures(object = rna),
+                              reference.assay = "RNA", 
+                              query.assay = "ACTIVITY", 
+                              reduction = "cca")
+```
+
+  - **2.2 Based on anchors between two modalities, please use 2:30 LSI as `weight.reduction` to transfer scRNA-seq cell types stored in `assign.ident` to scATAC-seq data (1 pts;). Attach predicted cell types to scATAC-seq metadata and Visualize the predicted cell types on UMAP (1 pts;).**
+  
+  - **Answer**: Part (1): Code below. Part (2): I predicted the cell types to scATAC-seq metadata and visualized the predicted cell types on UMAP below. 
+
+```{r}
+# part 1: transfer scRNA-seq cell types stored in `assign.ident` to scATAC-seq data
+celltype_transfer = TransferData(anchorset = anchors, 
+                                 refdata = rna$assign.ident,
+                                 weight.reduction = atac[["lsi"]],
+                                 dims = 2:30)
+atac = AddMetaData(atac, metadata = celltype_transfer)
+```
+
+```{r}
+# part 2: visualize
+DimPlot(atac, group.by = "predicted.id", label = TRUE) +
+  ggtitle("Predictions")
+=======
+>>>>>>> Stashed changes
 
 ```{r}
 
@@ -506,19 +1171,101 @@ renamed_rna.obj <- RenameCells(object = rna,new.names = atac_barcode)
 
 ```{r}
 
+<<<<<<< Updated upstream
+=======
+>>>>>>> d8d2bb363779f4e41babdc9a627bf6c2434d27d4
+>>>>>>> Stashed changes
 ```
 
 **3. Though we can do label transferring to annotate scATAC-seq cells, back to the time without multiome data, it is hard to say if this label transferring method is accurate. The good thing in multiome data is that, by matching cell barcodes between scRNA-seq and scATAC-seq data, we actually know the "true label" for cells in scATAC-seq. We have a ground-truth annotation that can be used for evaluating the accuracy of label transferring.**
 
   - **3.1 Since we subset the scRNA-seq and scATAC-seq objects with the list of common cells, the `assign.ident` column stored in scRNA-seq metadata is exactly the true cell type label for cells in scATAC-seq. So we can easily add `assign.ident` in scATAC-seq metadata and plot a UMAP. Please visualize the ground-truth cell type labels of scATAC-seq data on UMAP (1 pts;). Compare the results with predicted cell type UMAP from the last question. Virtually, does label transferring seem like an accurate method (1 pts;)?**
   
+<<<<<<< Updated upstream
 ```{r}
 
+=======
+<<<<<<< HEAD
+  - **Answer**: Part (1): I plotted with `assign.ident` which serves as the ground truth. Part (2): Comparing the two plots, I see several major discrepancies between the predictions and the ground truth. For example, the deviations for CD8T and NK. Thus I would say, from inspecting the plots, that label transferring does not seem like an accurate method. (However in the later in part, we see that the accuracy is pretty good at around 83.15%). 
+  
+```{r}
+# part (1): visualization of the ground truth
+DimPlot(atac, group.by = "assign.ident", label = TRUE) + 
+  ggtitle("Ground Truth")
+=======
+```{r}
+
+>>>>>>> d8d2bb363779f4e41babdc9a627bf6c2434d27d4
+>>>>>>> Stashed changes
 ```
 
 
   - **3.2 What is the accuracy of the label transferring method based on the RP-enhanced model we used to calculate gene activity score? In Part IV Question 2.1, We used the 'ACTIVITY' slot to find anchors. This gene activity matrix is derived from the peak count matrix based on the RP-enhanced model we set in MAESTRO. Please show a table of what percent of the cells are correctly labeled (predicted.id == True_label) (1 pts;) ?**
   
+<<<<<<< Updated upstream
+=======
+<<<<<<< HEAD
+  - **Answer**: I compared the predicted to the ground truth, and found 83.15% of the cells are correctly labeled. The table below provides more details.
+  
+```{r}
+atac$correct = atac$predicted.id == rna$assign.ident
+table(atac$correct)
+prop.table(table(atac$correct))
+```
+
+  - **3.3 For scATAC-seq data, create a heatmap with true cell type labels on x-axis and predicted cell type labels on y-axis. Fill with gradient colors to indicate the fraction of cells matched between corresponding cell types (Graduate level 2 pts;). Describe what clusters appear to map 1 to 1 between the two modalities and which clusters appear to split (Graduate level 2 pts;)?**
+  
+  - **Answer**: Part (1): Heatmap is provided below. Part (2): I observe that clusters B, CD8Tex, Mono/Macro, NK appear to map 1 to 1 between the two modalities because we see strong red colors along their diagonals. Clusters CD8T and pDC appear to split because we see light red colors in their diagonals (especially in CD8T). For CD4Tconv, if the ground truth was CD4Tconv, it seems to have been correctly predicted (indicating a 1 to 1), however many of the incorrect predictions also got labeled as CD4Tconv (which splits), so this clusters seems somewhere in the middle.
+
+```{r}
+# predictions and ground truth
+accuracy = table(rna$assign.ident, atac$predicted.id)
+
+# normalize
+accuracy = accuracy/rowSums(accuracy) 
+
+# part 1: heatmap visualization
+accuracy = as.data.frame(accuracy)
+ggplot(accuracy, aes(Var1, Var2, fill = Freq)) + 
+  geom_tile() + 
+  scale_fill_gradient(name = "Fraction of Cells", 
+                      low = "#ffffc8", high = "#7d0025") + 
+  xlab("Cell type annotation (RNA)") + 
+  ylab("Predicted Cell Type Label (ATAC)") + 
+  theme_cowplot() + 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+```
+
+  - **3.4 Generate a density plot for prediction score generated in label transferring steps. Use two different colors for correctly annotated cells and incorrectly annotated cells (Graduate level 2 pts;).** 
+  
+  - **Answer**: I followed the Satija Lab vignettes to produce the density curve. I see that the correctly annotated cells and incorrectly annotated cells have different density plots.
+
+```{r}
+# source: https://satijalab.org/seurat/articles/atacseq_integration_vignette.html
+# data processing
+atac$annotation_correct = atac$predicted.id == atac$assign.ident
+data = FetchData(atac, 
+                 vars = c("prediction.score.max", "annotation_correct"))
+correct = length(which(rna$assign.ident == atac$predicted.id))
+incorrect = length(which(rna$assign.ident != atac$predicted.id))
+
+# visualize
+ggplot(data, aes(prediction.score.max, 
+                 fill = annotation_correct, 
+                 colour = annotation_correct)) +  
+  geom_density(alpha = 0.5) + 
+  theme_cowplot() + 
+  scale_fill_discrete(name = "Annotation Correct", 
+                      labels = c(paste0("FALSE (n = ", incorrect, ")"),
+                                 paste0("TRUE (n = ", correct, ")"))) +
+  scale_color_discrete(name = "Annotation Correct", 
+                       labels = c(paste0("FALSE (n = ", incorrect, ")"),
+                                  paste0("TRUE (n = ", correct, ")"))) + 
+  xlab("Prediction Score")
+```
+
+=======
+>>>>>>> Stashed changes
 ```{r}
 
 ```
@@ -535,4 +1282,8 @@ renamed_rna.obj <- RenameCells(object = rna,new.names = atac_barcode)
  
 
 ```
+<<<<<<< Updated upstream
+=======
+>>>>>>> d8d2bb363779f4e41babdc9a627bf6c2434d27d4
+>>>>>>> Stashed changes
 

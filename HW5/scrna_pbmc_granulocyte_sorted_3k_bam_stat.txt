@@ -1,0 +1,22 @@
+
+#==================================================
+#All numbers are READ count
+#==================================================
+
+Total records:                          211864897
+
+QC failed:                              0
+Optical/PCR duplicate:                  0
+Non primary hits                        55340229
+Unmapped reads:                         0
+mapq < mapq_cut (non-unique):           15703353
+
+mapq >= mapq_cut (unique):              140821315
+Read-1:                                 0
+Read-2:                                 0
+Reads map to '+':                       82338792
+Reads map to '-':                       58482523
+Non-splice reads:                       122222735
+Splice reads:                           18598580
+Reads mapped in proper pairs:           0
+Proper-paired reads map to different chrom:0
