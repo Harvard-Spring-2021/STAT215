@@ -1,0 +1,227 @@
+---
+title: "Spring 2021 STAT115/215 BIO/BST282"
+author: "Nabib Ahmed"
+output:
+  html_document: default
+  pdf_document: default
+---
+```{r,warning=F,message=F,include=F}
+library(ggplot2)
+library(cowplot)
+library(limma)
+library(survival)
+library(survminer)
+library(corrplot)
+library(MAGeCKFlute)
+library(pheatmap)
+library(FirebrowseR)
+library(glmnet)
+library(dplyr)
+library(plyr)
+```
+
+Data for this HW is stored at /n/stat115/2021/HW6/data
+
+## Part I: Data exploration on TCGA
+
+The Cancer Genome Atlas (TCGA) is an NCI project to comprehensively 
+profile over 10K tumors in 33 cancer types. In this homework, we are 
+going to explore TCGA data analysis. 
+
+Q1. Go to TCGA GDC website (https://portal.gdc.cancer.gov/) and explore 
+the GDC data portal. How many glioblastoma (GBM) cases in TCGA meet ALL 
+of the following requirements?
+
+1. Male; 
+
+2. Diagnosed at the age above 45; 
+
+3. Still alive.
+
+
+**Answer**: One the TCGA GDC website, I found 42 cases met all the requirements. Below are the screenshots of the filters I applied.
+
+![Site Specific Filters](Q1/filter1.png)
+
+
+![Demographic Specific Filters](Q1/filter2.png)
+
+Q2. TCGA GDC (https://portal.gdc.cancer.gov/) and Broad Firehose (http://firebrowse.org/) both provide processed TCGA data for downloading and downstream analysis. Download clinical data of GBM. What’s the average diagnosed age of all GBM patients?
+
+**Answer**: The abbreviation for glioblastoma is GBM. The average diagnosed age of all GBM patients is 57.81681 years.
+
+```{r}
+# get abbreviations
+cohorts = Metadata.Cohorts(format = "csv")
+head(cohorts, 15)
+```
+```{r}
+# Download GBM data (have to do this because we can only receive 150 patients at a time)
+all.Received <- FALSE
+page.Counter <- 1
+page.size <- 150
+gbm_pats <- list()
+while(all.Received == FALSE) {
+    gbm_pats[[page.Counter]] <- Samples.Clinical(format = "csv",
+            cohort = "GBM", page_size = page.size, page = page.Counter)
+    if(page.Counter > 1) {
+        colnames(gbm_pats[[page.Counter]]) <-
+            colnames(gbm_pats[[page.Counter-1]])
+    }
+
+    if(nrow(gbm_pats[[page.Counter]]) < page.size) {
+        all.Received = TRUE
+    } else {
+        page.Counter = page.Counter + 1
+    }
+}
+
+gbm_pats <- do.call(rbind, gbm_pats)
+
+#Dimension of the table containing patient info
+dim(gbm_pats)
+```
+```{r}
+# get average age of diagnosis
+mean(gbm_pats$age_at_initial_pathologic_diagnosis)
+```
+
+
+
+## Part II – Tumor Subtypes
+
+Q1. GBM is one of the earliest cancer types to be processed by TCGA, and the expression profiling was initially done with Affymetrix microarray. 
+Also, with brain cancer, it is hard to get sufficient number of normal samples. 
+We provide the pre-processed expression matrix in (GBM_expr.txt) where samples are columns and genes are rows. Do a K-means (k=3) clustering from all the genes and the most variable 2000 genes. Do tumor and normal samples separate in different clusters? Do the tumors samples consistently separate into 2 clusters, regardless of whether you use all the genes or most variable genes? 
+
+```{r}
+# your code here
+
+```
+
+Q2. LIMMA is a BioConductor package that does differential expression between microarrays, RNA-seq, and can remove batch effects (especially if you have experimental design with cmplex batches). Use LIMMA to see how many genes are differentially expressed between the two GBM subtypes (with FDR < 0.05 and logFC > 1.5)? 
+
+```{r}
+# your code here
+
+```
+
+Q3. For Graduate Students: From the DNA methylation profiles (GBM_meth.txt), how many genes are significantly differentially methylated between the two subtypes? Are DNA methylation associated with higher or lower expression of these genes? How many differentially expressed genes have an epigenetic (DNA methylation) cause? 
+
+```{r}
+# your code here
+
+```
+
+Q4. With the survival data of the GBM tumors (GBM_clin.txt), make a Kaplan-Meier Curve to compare the two subtypes of GBM patients. Is there a significant difference in patient outcome between the two subtypes? 
+
+```{r}
+# your code here
+
+```
+
+Q5. For Graduate Students: Use the differential genes (say this is Y number of genes) between the two GBM subtypes as a gene signature to do a Cox regression of the tumor samples. Does it give significant predictive power of patient outcome?
+
+```{r}
+# your code here
+
+```
+
+Q6. For Graduate Students: Many studies use gene signatures to predict prognosis of patients. Take a look at this paper: http://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1002240. It turns out that most published gene signatures are not significantly more associated with outcome than random predictors. Write a script to randomly sample Y genes in this expression data as a gene signature and do Cox regression on the sampled signature to predict patient outcome. Automate the script and random sample followed by Cox regression 100 times. How does your signature in Q5 compared to random
+signatures in predicting outcome? 
+
+```{r}
+# your code here
+
+```
+
+
+## Part III – Tumor mutation analyses and precision medicine
+
+Q1. The MAF files contain the mutations of each tumor compared to the normal DNA in the patient blood. Write a script to parse out the mutations present in each tumor sample and write out a table. The table should rank the genes by how many times mutation happens in the tumor samples provided. Submit the table with the top 20 genes. 
+
+```{r}
+# your code here
+
+```
+
+Q2. Existing clinical genetic testing laboratories use information about the frequency of a mutation in cohorts, like from the GBM cohort in TCGA, to assess a mutation’s clinical significance (guidelines: https://www.ncbi.nlm.nih.gov/pubmed/27993330). Of the top 20 mutated genes in Q1, what is the most frequent protein change (hint: count mutations with the exact same amino acid change as the same)? In what gene does the most frequent protein change occur? Do you think this gene and protein mutation pair forms a genetic subtype of GBM (i.e. Is this gene-protein mutation pair seen more in one GBM subtype than the other)? 
+
+```{r}
+# your code here
+
+```
+
+Q3. CBioPortal has a comprehensive list of tumor profiling results for interactive visualization. Go to cBioPortal (http://www.cbioportal.org), and select either “Glioblastoma” under “CNS/Brian” (left) or select “TCGA PanCancer Atlas Studies” under “Quick Select” (middle). Input each gene in Q1 and click Submit. From the OncoPrint tab, you can see how often each gene is mutated in GBM or all TCGA cancer types. Based on this, which of the genes in Q1 is likely to be a cancer driver gene? 
+
+Q4. From the Mutation tab on the cBioPortal result page, is this mutation a gain or loss of function mutation on the gene you identified from Q2?
+
+Q5. From cBioPortal, select Glioblastoma (TCGA provisional, which has the largest number of samples) and enter the driver mutation gene in Q2. From the Survival tab, do GBM patients with this mutation have better outcome in terms of progression free survival and overall survival? 
+
+Q6. You are working with an oncologist collaborator to decide the treatment option for a GBM patient. From exome-seq of the tumor, you identified the top mutation in Q2. To find out whether there are drugs that can target this mutation to treat the cancer, go to https://www.clinicaltrials.gov  to find clinical trials that target the gene in Q2. How many trials are related to glioblastoma? How many of these are actively recruiting patients which this patient could potentially join? 
+Hint: Search by the disease name and gene name. 
+
+```{r}
+# your code here
+
+```
+
+
+## Part IV- CRISPR screens
+
+We will learn to analyze CRISPR screen data from this paper: https://www.ncbi.nlm.nih.gov/pubmed/?term=26673326. To identify therapeutic targets for glioblastoma (GBM), the author performed genome-wide CRISPR-Cas9 knockout (KO) screens in patient-derived GBM stem-like cell line (GSCs0131). 
+
+MAGeCK tutorial:
+https://sourceforge.net/p/mageck/wiki/Home/
+https://sourceforge.net/projects/mageck/
+
+Q1. Use MAGeCK to do a basic QC of the CRISPR screen data (e.g. read mapping, ribosomal gene selection, replicate consistency, etc). Comment on the quality of the data based on your results.
+
+Directory: /n/stat115/2021/HW6/data/crispr_data
+```{r}
+# your code here
+
+```
+
+Q2. Analyze CRISPR screen data with MAGeCK to identify positive and negative selection genes. How many genes are selected as positive or negative selection genes, respectively, and what are their respective enriched pathways? 
+
+```{r}
+# your code here
+
+```
+
+Q3. For Graduate Students: Genes negatively selected in this CRISPR screen could be potential drug targets. However, if they are always negatively selected in many cells, targeting such genes might create too much toxicity to the normal cells. Go to depmap (DepMap.org) which has CRISPR / RNAi screens of over 500 human cell lines, Click “Tools”  Data Explorer. Pick the top 3 negatively selected genes to explore. Select Gene Dependency from CRISPR (Avana) on the X axis and Omics from Expression on the Y axis, to see the relationship between the expression level of the gene and dependency (CRISPR screen selection) of the gene across ~500 cell lines. Are the top 3 genes good drug targets? 
+
+```{r}
+# your code here
+
+```
+
+Q4. For Graduate Students: Let’s filter out pan essential genes (PanEssential.txt) from the negatively selected genes in Q2. Take the remaining top 10 genes, and check whether those genes have drugs or are druggable from this website: http://www.oasis-genomics.org/. Go to Analysis -> Pan Cancer Report, enter the top 10 genes and check the table for druggability (more druggable for higher number on Dr). Which of these genes are druggable?
+
+Note: If the above website cannot be opened, try https://www.dgidb.org/. Go to Search Potential Druggability or Search Drug-Gene Interactions ann enter the top 10 genes.
+
+```{r}
+# your code here
+
+```
+
+
+## Part V. Cancer immunology and immunotherapy
+
+Immune checkpoint inhibitors, which primarily activate CD8 T cells, have shown remarkable efficacy in melanoma (SKCM), but haven’t worked as well in GBM patients. Let’s explore the tumor immune microenvironment from TCGA data. Although the cancer patients in TCGA were not treated with immunotherapy, their response to other drugs and clinical outcome might be influenced by pre-treatment tumor immune microenvironment
+
+Q1. TIMER (http://timer.cistrome.org/) estimated the infiltration level of different immune cells of TCGA tumors using different immune deconvolution methods. CD8A and CD8B are two gene markers on CD8 T cells. On the Diff Exp tab, compare the expression level of either CD8A or CD8B between GBM and SKCM (Metastatic Melanoma). Based on this, which cancer type have more CD8 T cells? 
+
+Q2. On the Gene tab, select both GBM and SKCM (Metastatic Melanoma), include CD8 T cells as the cell infiltrate. Check the following genes, PDCD1(PD1), CD274(PDL1), CTLA4 which are the targets of immune checkpoint inhibitors, to see whether their expression level is associated with immune cell infiltration in the GBM and SKCM tumors. Their higher expression usually indicate that T cells are in a dysfunctional state, which immune checkpoint inhibitors aim to revive. 
+
+Q3. On the Survival tab, select both GBM and SKCM, include CD8 T cell as the cell infiltrate, add tumor stage and patient age as the clinical variables to conduct survival analyses. Based on the Cox PH model, what factors are the most significantly associated with patient survival in each cancer type? Plot the Kaplan-Meier curve to evaluate how the immune cell infiltrate is associated with survival. Is CD8 T cell associated with patient survival in each cancer type? 
+
+Q4. For Graduate Students: Based on the above observations, can you hypothesize why immune checkpoint inhibitors don’t work well for some GBM patients? 
+
+
+# Rules for submitting the homework:
+
+Please submit your solution directly on the canvas website. Please provide both your code in this Rmd document and an html file for your final write-up. Please pay attention to the clarity and cleanness of your homework.
+
+The teaching fellows will grade your homework and give the grades with feedback through canvas. Some of the questions might not have a unique or optimal solution. TFs will grade those according to your creativity and effort on exploration, especially in the graduate-level questions.
