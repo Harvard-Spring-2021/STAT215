@@ -484,27 +484,129 @@ It seems even with limiting our sample to the top 2000 variable genes, we don't 
 
 
 
+
+
+
 ## Part III – Tumor mutation analyses and precision medicine
 
 Q1. The MAF files contain the mutations of each tumor compared to the normal DNA in the patient blood. Write a script to parse out the mutations present in each tumor sample and write out a table. The table should rank the genes by how many times mutation happens in the tumor samples provided. Submit the table with the top 20 genes. 
 
-```{r}
-# your code here
+**Answer**: First I downloaded from Cannon. Then I used `dplyr` to get a table with the top 20 genes (provided below). The top gene was TP53 with 16 protein changes.
 
+```{bash, eval=FALSE}
+# get the files 
+scp -r stat215u2107@login.rc.fas.harvard.edu:/n/stat115/2021/HW6/data/MAF part3/
+```
+
+
+```{r}
+# bulk get file paths
+maf_paths <- list.files(path = "part3/maf", 
+                      pattern = "*.txt", 
+                      full.names = TRUE, 
+                      recursive = FALSE)
+
+# load data
+maf_data = ldply(maf_paths, read.delim)
+
+# find number of protein change per gene
+maf_gene_changes = maf_data %>% 
+  group_by(Hugo_Symbol) %>% 
+  dplyr::summarise(Count = n()) %>% 
+  arrange(dplyr::desc(Count))
+
+# list top 20 genes
+maf_gene_changes[1:20, ]
 ```
 
 Q2. Existing clinical genetic testing laboratories use information about the frequency of a mutation in cohorts, like from the GBM cohort in TCGA, to assess a mutation’s clinical significance (guidelines: https://www.ncbi.nlm.nih.gov/pubmed/27993330). Of the top 20 mutated genes in Q1, what is the most frequent protein change (hint: count mutations with the exact same amino acid change as the same)? In what gene does the most frequent protein change occur? Do you think this gene and protein mutation pair forms a genetic subtype of GBM (i.e. Is this gene-protein mutation pair seen more in one GBM subtype than the other)? 
 
-```{r}
-# your code here
+**Answer**: We will look at gene-protein pairs by concatenating those two columns (`Hugo_Symbol` and `Protein_Change`) as per lab instruction. Jack Kang on slack said to count all gene-protein pairs. Below are the results across all subtypes and then for each individual subtype.
 
+```{r}
+# most common gene_protein sequence across both subtypes
+maf_gene_protein_both = maf_data %>% 
+  group_by(Hugo_Symbol, Protein_Change) %>% 
+  dplyr::summarise(Count = n()) %>% 
+  arrange(dplyr::desc(Count))
+
+maf_gene_protein_both[1:20, ]
+```
+Thus the most frequent protein change (considering both subtypes) is p.R132H on gene IDHI. This gene IDHI is the one that has the most frequent protein change occurring. 
+
+Now let's stratify based on subtypes. We need to match on the cluster types from above.
+
+```{r}
+# add label indicating their source sample
+maf_data$sample = str_replace_all(
+  substr(maf_data$Tumor_Sample_Barcode, 1, 12),
+  "-", ".")
+
+# add cluster label to the data
+maf_data$type = tumor_clusters[maf_data$sample, 'type']
+
+# subtype 0 MAF data
+maf_data0 = maf_data[maf_data$type == 0, ]
+  
+# subtype 1 MAF data
+maf_data1 = maf_data[maf_data$type == 1, ]
 ```
 
+
+```{r}
+# most common gene_protein sequence across for subtype 0
+maf_gene_protein_0 = maf_data0 %>% 
+  group_by(Hugo_Symbol, Protein_Change) %>% 
+  dplyr::summarise(Count = n()) %>% 
+  arrange(dplyr::desc(Count))
+
+maf_gene_protein_0[1:20, ]
+```
+
+
+```{r}
+# most common gene_protein sequence across for subtype 1
+maf_gene_protein_1 = maf_data1 %>% 
+  group_by(Hugo_Symbol, Protein_Change) %>% 
+  dplyr::summarise(Count = n()) %>% 
+  arrange(dplyr::desc(Count))
+
+maf_gene_protein_1[1:20, ]
+```
+
+Stratifying based on the tumor type, we see that the IDH1 p.R132H gene protein mutation is specific to one type (namely type 0 here) as the other type doesn't not include it in it's top 20 common gene-protein mutation pairs. Thus this gene-protein mutation pair is seen more in one GBM subtype than the other as demonstrated by the above tables. This is a useful tool in uncovering different characteristics of different types of tumors.
+
+
+
+
+
+
+              
 Q3. CBioPortal has a comprehensive list of tumor profiling results for interactive visualization. Go to cBioPortal (http://www.cbioportal.org), and select either “Glioblastoma” under “CNS/Brian” (left) or select “TCGA PanCancer Atlas Studies” under “Quick Select” (middle). Input each gene in Q1 and click Submit. From the OncoPrint tab, you can see how often each gene is mutated in GBM or all TCGA cancer types. Based on this, which of the genes in Q1 is likely to be a cancer driver gene? 
+
+**Answer**: I provide a screen shot below. Based on cBioPortal, I find XX to be genes likely to be a cancer driver gene.
+    
+```{r}
+# get list of HUGO symbols from
+                            
+```
+
+
+
+
 
 Q4. From the Mutation tab on the cBioPortal result page, is this mutation a gain or loss of function mutation on the gene you identified from Q2?
 
+
+
+
+
+
 Q5. From cBioPortal, select Glioblastoma (TCGA provisional, which has the largest number of samples) and enter the driver mutation gene in Q2. From the Survival tab, do GBM patients with this mutation have better outcome in terms of progression free survival and overall survival? 
+
+
+
+
 
 Q6. You are working with an oncologist collaborator to decide the treatment option for a GBM patient. From exome-seq of the tumor, you identified the top mutation in Q2. To find out whether there are drugs that can target this mutation to treat the cancer, go to https://www.clinicaltrials.gov  to find clinical trials that target the gene in Q2. How many trials are related to glioblastoma? How many of these are actively recruiting patients which this patient could potentially join? 
 Hint: Search by the disease name and gene name. 
@@ -526,6 +628,55 @@ https://sourceforge.net/projects/mageck/
 Q1. Use MAGeCK to do a basic QC of the CRISPR screen data (e.g. read mapping, ribosomal gene selection, replicate consistency, etc). Comment on the quality of the data based on your results.
 
 Directory: /n/stat115/2021/HW6/data/crispr_data
+
+```{bash, eval= FALSE}
+# making my batch file (based on lab specifications)
+cat ->qc.sh <<EOF
+#!/bin/bash
+
+:: Number of cores
+#SBATCH -n 1
+
+:: Ensure that all cores are on one machine
+#SBATCH -N 1
+
+:: Runtime in D-HH:MM
+#SBATCH -t 0-06:00 
+
+:: Partition to submit to
+#SBATCH -p serial_requeue 
+
+:: Memory pool for all cores (see also --mem-per-cpu)
+#SBATCH --mem=1000 
+
+:: File to which STDOUT will be written
+#SBATCH -o mageck.out 
+
+:: File to which STDERR will be written
+#SBATCH -e mageck.err 
+
+:: Email notifications
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user="nahmed@college.harvard.edu"
+
+module load Anaconda/5.0.1-fasrc01
+
+source activate /n/stat115/2021/HW6_env2
+
+mageck count -l /n/stat115/2021/HW6/data/crispr_data/library.csv -n OUT --sample-label Day0,Day23 \
+--fastq /n/stat115/2021/HW6/data/crispr_data/GSC_0131_Day0_Rep1.fastq.gz,/n/stat115/2021/HW6/data/crispr_data/GSC_0131_Day0_Rep2.fastq.gz /n/stat115/2021/HW6/data/crispr_data/GSC_0131_Day23_Rep1.fastq.gz,/n/stat115/2021/HW6/data/crispr_data/GSC_0131_Day23_Rep2.fastq.gz
+
+EOF
+
+sbatch qc.sh
+
+# job id: 26234441 (in HW5 directory)
+
+# get output summary file
+mageck test -k OUT.count.txt -t Day23 -c Day0 -n OUT
+```
+
+
 ```{r}
 # your code here
 
