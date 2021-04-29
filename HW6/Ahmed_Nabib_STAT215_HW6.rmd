@@ -150,7 +150,7 @@ Therefore, using top 2000 variable genes and all genes results in nice cluster s
 
 Q2. LIMMA is a BioConductor package that does differential expression between microarrays, RNA-seq, and can remove batch effects (especially if you have experimental design with complex batches). Use LIMMA to see how many genes are differentially expressed between the two GBM subtypes (with FDR < 0.05 and logFC > 1.5)? 
 
-**Answer**: We are interested in the two GBM subtypes - I'll use the two clusters corresponding to the tumor samples only from Q1 using only the 2000 top variable genes - those are clusters 1 and 3. We will need make a design matrix. After that, we did LIMMA analysis. Using `ebayes` and `topTable` (which is specified with the criteria FDR < 0.05 and logFC > 1.5), I got 1284 genes are differentially expressed between the two GBM subtypes.
+**Answer**: We are interested in the two GBM subtypes - I'll use the two clusters corresponding to the tumor samples only from Q1 using only the 2000 top variable genes - those are namely clusters 1 and 3. We will need make a design matrix. After that, we did LIMMA analysis. Using `ebayes` and `topTable` (which is specified with the criteria FDR < 0.05 and logFC > 1.5 - we can view adjusted p-value as equivalent to FDR in topTable), I got 385 genes are differentially expressed between the two GBM subtypes.
 
 ```{r}
 # remaking the top 2K variable genes with proper row names
@@ -171,17 +171,25 @@ design_matrix = model.matrix(~ type, tumor_clusters) # get design matrix
 
 # LIMMA analysis
 lmfit_expr = lmFit(gbm_expr_top2k[, c(1:60)], design_matrix)
-lmfit_expr = eBayes(lmfit_expr, trend = TRUE)
-dep_expr = topTable(lmfit_expr, coef = 2, p.value = 0.05, lfc = log(1.5), number = 2000)
+lmfit_expr = eBayes(lmfit_expr)
+dep_expr = topTable(lmfit_expr, coef = 2, p.value = 0.05, lfc = 1.5, number = 2000)
 head(dep_expr, 10)
 nrow(dep_expr)
 ```
 
+
+
+
+
+
+
 Q3. For Graduate Students: From the DNA methylation profiles (GBM_meth.txt), how many genes are significantly differentially methylated between the two subtypes? Are DNA methylation associated with higher or lower expression of these genes? How many differentially expressed genes have an epigenetic (DNA methylation) cause? 
 
-**Answer**: First we get the DNA methylation profiles from Cannon. Not all samples have methylation profiles, so we need to redesign the design matrix by focusing on the samples we have in DNA methylation profiles. A quick inspection shows us that the samples in DNA methylation profiles are all tumor samples the correspond to the same label from the previous questions. I perform this matching. We also need to logit transform the values since the methylation values is in range 0 to 1 before running limma. I'll also filter the DNA methylation profiles to the top 2000 variable genes similar to the expression data.
+**Answer**: First we get the DNA methylation profiles from Cannon. Not all samples have methylation profiles, so we need to redesign the design matrix by focusing on the samples we have in DNA methylation profiles. A quick inspection shows us that the samples in DNA methylation profiles are all tumor samples that correspond by the sample label from the previous questions. I perform this matching. We also need to logit transform the values since the methylation values is in range 0 to 1 before running limma. I'll also filter the DNA methylation profiles to the top 2000 variable genes similar to how we focused on top 2000 variable genes in the expression data.
 
-Using `ebayes` and `topTable` (which is specified with the criteria FDR < 0.05 and logFC > 1.5), I got 1216 genes are differentially methylated between the two GBM subtypes. To compare with methylation with expression, I will use `intersect()`.
+Using `ebayes` and `topTable` (which is specified with the criteria FDR < 0.05 and logFC > 1.5), I got 735 genes are differentially methylated between the two GBM subtypes. 
+
+To compare with methylation with expression, I will use `intersect()`, then plot methylation logFC against expression logFC, and calculate the association. I got that 62 genes are differentially methylated and differentially expressed. The resulting plot below shows a negative association between the two, and the resulting correlation is -0.4954892. This indicates that high methylation is associated with low gene expression which aligns with our in class discussion on methylation and gene expression.
 
 ```{bash, eval=FALSE}
 # get the file (missing from cannon)
@@ -194,6 +202,7 @@ gbm_meth = read.csv("part2/GBM_meth.txt", sep = "\t")
 rownames(gbm_meth) = gbm_meth$X # set rownames as genes
 gbm_meth = gbm_meth[, -1] # drop gene name row
 
+# filter for top 2000 variable genes
 gbm_meth$var = rowVars(data.matrix(gbm_meth)) # find variances
 gbm_meth = gbm_meth[order(-gbm_meth$var), ] # sort genes
 gbm_meth_top2k = head(gbm_meth, 2000) # get top 2000 variable genes
@@ -208,11 +217,41 @@ meth_design_matrix = subset(design_matrix, rownames(design_matrix) %in% colnames
 
 # LIMMA analysis
 lmfit_meth = lmFit(gbm_meth_top2k, meth_design_matrix)
-lmfit_meth = eBayes(lmfit_meth, trend = TRUE)
-dep_meth = topTable(lmfit_meth, coef = 2, p.value = 0.05, lfc = log(1.5), number = 2000)
+lmfit_meth = eBayes(lmfit_meth)
+dep_meth = topTable(lmfit_meth, coef = 2, p.value = 0.05, lfc = 1.5, number = 2000)
 head(dep_meth, 10)
 nrow(dep_meth)
 ```
+
+```{r}
+# compare with methylation with expression
+gene_intersect = intersect(rownames(dep_expr), rownames(dep_meth)) # find common genes
+length(gene_intersect) # find number of common genes
+
+# construct a dataframe of common genes methylation logFC and expression logFC
+common_gene = data.frame(row.names = gene_intersect,
+                         exprLFC = dep_expr[gene_intersect, ]$logFC,
+                         methLFC = dep_meth[gene_intersect, ]$logFC)
+
+# make plots of methylation logFC vs expression logFC
+plot(common_gene$exprLFC, common_gene$methLFC,
+     main = "Methylation logFC vs Expression logFC",
+     xlab = "Expression LFC",
+     ylab = "Methylation LFC")
+
+# association
+cor(common_gene$exprLFC, common_gene$methLFC)
+```
+
+
+
+
+
+
+
+
+
+
 
 
 
