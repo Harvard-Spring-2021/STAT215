@@ -19,6 +19,7 @@ library(FirebrowseR)
 library(glmnet)
 library(dplyr)
 library(plyr)
+library(factoextra)
 
 
 ```
@@ -99,12 +100,14 @@ Also, with brain cancer, it is hard to get sufficient number of normal samples.
 We provide the pre-processed expression matrix in (GBM_expr.txt) where samples are columns and genes are rows. Do a K-means (k=3) clustering from all the genes and the most variable 2000 genes. Do tumor and normal samples separate in different clusters? Do the tumors samples consistently separate into 2 clusters, regardless of whether you use all the genes or most variable genes? 
 
 ```{r}
-GBM_expr <- read.csv("GBM_expr.txt", sep = "\t")
+GBM_expr <- read.csv("part2/GBM_expr.txt", sep = "\t")
 
 ```
 
 ```{r}
 # For all of the genes
+
+set.seed(123)
 GBM_all <- t(GBM_expr[,-1])
 k3 <- kmeans(GBM_all, centers = 3, nstart = 10, iter.max = 100)
 fviz_cluster(k3, data = GBM_all)
@@ -113,28 +116,58 @@ fviz_cluster(k3, data = GBM_all)
 
 ```{r}
 # For the top 2000 genes
-GBM_var <- rowVars(data.matrix(GBM_expr))
+GBM_var <- rowVars(data.matrix(GBM_expr[,-1]))
 thresh <-  sort(GBM_var, decreasing = TRUE)[2000]
 GBM_2000 <- na.omit(GBM_expr[GBM_var >= thresh, ])
+names <- GBM_2000[,1]
 GBM_2000 <- t(GBM_2000[,-1])
+colnames(GBM_2000) <- names
 
-
+set.seed(123)
 k3 <- kmeans(GBM_2000, centers = 3, nstart = 10, iter.max = 100)
 fviz_cluster(k3,data = GBM_2000)
 
 ```
 
-```{r}
-
+```
+Tumor and normal samples seem to separate, but the two tumor samples do not separate regardless of whether you use the top 2000 variable genes or all the genes.
 ```
 
 
 Q2. LIMMA is a BioConductor package that does differential expression between microarrays, RNA-seq, and can remove batch effects (especially if you have experimental design with cmplex batches). Use LIMMA to see how many genes are differentially expressed between the two GBM subtypes (with FDR < 0.05 and logFC > 1.5)? 
 
 ```{r}
-# your code here
+
+cluster <- as.data.frame(k3$cluster)
+GBM_2000 <- cbind(GBM_2000,cluster)
+GBM_2000$`k3$cluster` <- as.factor(GBM_2000$`k3$cluster`)
 
 ```
+
+```{r}
+# create overall design matrix
+design <- model.matrix(~ k3$cluster, GBM_2000)
+
+# create a design matrix for just tumor 1 which is cluster 1
+tum1_design <- design[0:60,]
+tum1_design[tum1_design[,2]!= 1,2] = 0
+tum1_design[tum1_design[,2]!= 0,2] = 1
+
+#fit the two tumors
+GBM_2000$`k3$cluster` <- NULL 
+tum1_mod <- lmFit(t(GBM_2000[0:60,]),tum1_design)
+
+
+```
+
+```{r}
+# Compute relevant statistics for tumor 1
+fit1 <- eBayes(tum1_mod)
+topGenes <- topTable(fit1,p.value = .05, lfc = 1.5, number = 500 )
+nrow(topGenes)
+```
+
+
 
 Q3. For Graduate Students: From the DNA methylation profiles (GBM_meth.txt), how many genes are significantly differentially methylated between the two subtypes? Are DNA methylation associated with higher or lower expression of these genes? How many differentially expressed genes have an epigenetic (DNA methylation) cause? 
 
@@ -146,10 +179,23 @@ Q3. For Graduate Students: From the DNA methylation profiles (GBM_meth.txt), how
 Q4. With the survival data of the GBM tumors (GBM_clin.txt), make a Kaplan-Meier Curve to compare the two subtypes of GBM patients. Is there a significant difference in patient outcome between the two subtypes? 
 
 ```{r}
-# your code here
+GBM_clin <- read.csv("GBM_clin.txt", sep = "\t")
+
 
 ```
 
+```{r}
+# Set tumor cluster 1 as subtype 1
+GBM_clin$tumor_subtype <- tum1_design[0:60,2]
+
+GBMclin_fit <- survfit(Surv(days.to.death, vital.status) ~ tumor_subtype, data = GBM_clin)
+ggsurvplot(GBMclin_fit, pval = TRUE, pval.method = TRUE) +
+    ggtitle("Survival for tumor subtype")
+
+```
+```
+There is a significant difference between the two curves, given that the log-rank is way less than 0.05
+```
 Q5. For Graduate Students: Use the differential genes (say this is Y number of genes) between the two GBM subtypes as a gene signature to do a Cox regression of the tumor samples. Does it give significant predictive power of patient outcome?
 
 ```{r}
@@ -171,31 +217,89 @@ signatures in predicting outcome?
 Q1. The MAF files contain the mutations of each tumor compared to the normal DNA in the patient blood. Write a script to parse out the mutations present in each tumor sample and write out a table. The table should rank the genes by how many times mutation happens in the tumor samples provided. Submit the table with the top 20 genes. 
 
 ```{r}
-# your code here
+# all files besides the one already read
+maf_files <- list.files(path = "C:/Users/Mark/OneDrive - Harvard University/Documents/Stat 115/Psets/Pset6/MAF", pattern = "*.txt", full.names = TRUE, recursive = FALSE)
+
+maf <- ldply(maf_files, read.delim)
+maf_ord <- maf %>% group_by(Hugo_Symbol) %>% dplyr::summarise(Count = n()) %>% arrange(dplyr::desc(Count))
+maf20 <- maf_ord[1:20,]
+maf20
 
 ```
 
 Q2. Existing clinical genetic testing laboratories use information about the frequency of a mutation in cohorts, like from the GBM cohort in TCGA, to assess a mutation’s clinical significance (guidelines: https://www.ncbi.nlm.nih.gov/pubmed/27993330). Of the top 20 mutated genes in Q1, what is the most frequent protein change (hint: count mutations with the exact same amino acid change as the same)? In what gene does the most frequent protein change occur? Do you think this gene and protein mutation pair forms a genetic subtype of GBM (i.e. Is this gene-protein mutation pair seen more in one GBM subtype than the other)? 
 
 ```{r}
-# your code here
+
+# Take subset of top 20 mutated genes
+maf20_subset <- subset(maf, Hugo_Symbol %in% maf20$Hugo_Symbol)
+# Find most common protein change
+mutate <- maf20_subset %>% group_by(Protein_Change) %>% dplyr::summarise(Count = n()) %>% arrange(dplyr::desc(Count))
+
+# Find which gene is associated with that protein change
+subset(maf20_subset, Protein_Change == "p.R132H")[,c("Hugo_Symbol", "Protein_Change")]
+
+# Find samples associated with IDH1 p.R132H mutation
+maf_mut <- subset(maf, Hugo_Symbol == "IDH1" & Protein_Change == "p.R132H")[,c("Tumor_Sample_Barcode")]
+maf_mut <- gsub('-', '.', maf_mut) %>% substr(start = 1, stop = 12)
+
+tum_cluster <- as.data.frame(k3$cluster)
+
+# Find which cluster(s) the samples belong to
+subset(tum_cluster, row.names(tum_cluster) %in% maf_mut)
 
 ```
 
 Q3. CBioPortal has a comprehensive list of tumor profiling results for interactive visualization. Go to cBioPortal (http://www.cbioportal.org), and select either “Glioblastoma” under “CNS/Brian” (left) or select “TCGA PanCancer Atlas Studies” under “Quick Select” (middle). Input each gene in Q1 and click Submit. From the OncoPrint tab, you can see how often each gene is mutated in GBM or all TCGA cancer types. Based on this, which of the genes in Q1 is likely to be a cancer driver gene? 
+```{r,echo =FALSE}
+knitr::include_graphics("C:/Users/Mark/OneDrive - Harvard University/Documents/Stat 115/Psets/Pset6/Screenshot (32).png")
+
+```
+EGFR is the most likely cancer driver because it has the greatest genetic alteration. 
 
 Q4. From the Mutation tab on the cBioPortal result page, is this mutation a gain or loss of function mutation on the gene you identified from Q2?
+```{r,echo =FALSE}
+knitr::include_graphics("C:/Users/Mark/OneDrive - Harvard University/Documents/Stat 115/Psets/Pset6/Screenshot (33).png")
+
+```
+
+This a gain of function as shown by the copy number above.
 
 Q5. From cBioPortal, select Glioblastoma (TCGA provisional, which has the largest number of samples) and enter the driver mutation gene in Q2. From the Survival tab, do GBM patients with this mutation have better outcome in terms of progression free survival and overall survival? 
+```{r,echo =FALSE}
+knitr::include_graphics("C:/Users/Mark/OneDrive - Harvard University/Documents/Stat 115/Psets/Pset6/Disease_Free .png")
+knitr::include_graphics("C:/Users/Mark/OneDrive - Harvard University/Documents/Stat 115/Psets/Pset6/Overall_ .png")
+
+```
+People with this mutation does not seem to have better outcome in both cases since the log rank values are not statistically significant
+
 
 Q6. You are working with an oncologist collaborator to decide the treatment option for a GBM patient. From exome-seq of the tumor, you identified the top mutation in Q2. To find out whether there are drugs that can target this mutation to treat the cancer, go to https://www.clinicaltrials.gov  to find clinical trials that target the gene in Q2. How many trials are related to glioblastoma? How many of these are actively recruiting patients which this patient could potentially join? 
 Hint: Search by the disease name and gene name. 
 
 ```{r}
-# your code here
+# Take in the trial results
+trial <- read.delim("C:/Users/Mark/OneDrive - Harvard University/Documents/Stat 115/Psets/Pset6/SearchResults.tsv")
+
+# Extract the following parameters
+tr_title <- grep('Glioblastoma', trial$Title)
+tr_cond <- grep('Glioblastoma', trial$Conditions)
+GBM_ind <- sort(union(tr_title, tr_cond))
+
+IDH1_title <- grep('IDH1', trial$Title)
+IDH1_cond <- grep('IDH1', trial$Conditions)
+IDH1_ind <- sort(union(IDH1_title, IDH1_cond))
+
+tr_ind <- intersect(GBM_ind, IDH1_ind)
+length(tr_ind)
+overlap_trials <- trial[tr_ind,]
+
+sum(overlap_trials$Status == "Recruiting")
 
 ```
-
+```
+There are 5 trials related to glioblastoma and 4 are actively recruiting.
+```
 
 ## Part IV- CRISPR screens
 
@@ -208,11 +312,33 @@ https://sourceforge.net/projects/mageck/
 Q1. Use MAGeCK to do a basic QC of the CRISPR screen data (e.g. read mapping, ribosomal gene selection, replicate consistency, etc). Comment on the quality of the data based on your results.
 
 Directory: /n/stat115/2021/HW6/data/crispr_data
-```{r}
-# your code here
+```{bash, eval = FALSE}
+mageck count -l /n/stat115/2021/HW6/data/crispr_data/library.csv -n OUT --sample-label Day0,Day23 \
+--fastq /n/stat115/2021/HW6/data/crispr_data/GSC_0131_Day0_Rep1.fastq.gz,/n/stat115/2021/HW6/data/crispr_data/GSC_0131_Day0_Rep2.fastq.gz /n/stat115/2021/HW6/data/crispr_data/GSC_0131_Day23_Rep1.fastq.gz,/n/stat115/2021/HW6/data/crispr_data/GSC_0131_Day23_Rep2.fastq.gz
+
+#Generate summary statistics
+mageck test -k OUT.count.txt -t Day23 -c Day0 -n OUT
 
 ```
 
+```{r}
+QC = read.delim("C:/Users/Mark/OneDrive - Harvard University/Documents/Stat 115/Psets/Pset6/OUT.countsummary.txt")
+QC
+```
+```{}
+The percentage of mapped reads is above 0.6 for all of them
+The zero count is less than 0.1 of the reads
+The Gini index is less than .1
+```
+
+```{r}
+gene_sum = read.delim("C:/Users/Mark/OneDrive - Harvard University/Documents/Stat 115/Psets/Pset6/OUT.gene_summary.txt")
+gene_sum
+subset(gene_sum, grepl("^RP", gene_sum$id) == TRUE)
+```
+```{}
+The negative rank of most of the ribosomes are generally high, this makes it good QC.
+```
 Q2. Analyze CRISPR screen data with MAGeCK to identify positive and negative selection genes. How many genes are selected as positive or negative selection genes, respectively, and what are their respective enriched pathways? 
 
 ```{r}

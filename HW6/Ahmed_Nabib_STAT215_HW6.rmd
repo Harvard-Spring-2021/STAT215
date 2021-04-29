@@ -21,6 +21,7 @@ library(plyr)
 library(factoextra)
 library(matrixStats)
 library(LaplacesDemon)
+library(stringr)
 ```
 
 Data for this HW is stored at /n/stat115/2021/HW6/data
@@ -115,11 +116,11 @@ gbm_expr = read.csv("part2/GBM_expr.txt", sep = "\t")
 set.seed(215)
 gbm_expr_all = t(gbm_expr[, -1])
 k3 = kmeans(gbm_expr_all, centers = 3, nstart = 10, iter.max = 100)
-fviz_cluster(k3, data = gbm_expr_all, geom="point")
+fviz_cluster(k3, data = gbm_expr_all, geom = "point")
 table(k3$cluster)
 ```
 
-The above K-means separates the normal and tumor samples based on **all genes**. The normal samples are the green cluster (cluster 2) with 10 samples. We also see two separate clusters (red cluster 1 and blue cluster 3) for the tumor samples each with 30 samples (however there is some small overlap).
+The above K-means separates the normal and tumor samples based on **all genes**. The normal samples are the green cluster (cluster 2) with 10 samples. We also see two separate clusters (red cluster 1 and blue cluster 3) for the tumor samples each with 30 samples (however there is some small overlap). I check what samples got placed in which clusters by exploring the `k3` object.
 
 ```{r}
 # find the top 2000 variable genes
@@ -135,7 +136,7 @@ gbm_expr_top2k = gbm_expr_top2k[, !names(gbm_expr_top2k) %in% c("var")] # drop t
 set.seed(215)
 gbm_expr_top2k_kmeans = t(gbm_expr_top2k)
 k3 = kmeans(gbm_expr_top2k_kmeans, centers = 3, nstart = 10, iter.max = 100)
-fviz_cluster(k3, data = gbm_expr_top2k_kmeans, geom="point")
+fviz_cluster(k3, data = gbm_expr_top2k_kmeans, geom = "point")
 table(k3$cluster)
 ```
 
@@ -191,8 +192,10 @@ Using `ebayes` and `topTable` (which is specified with the criteria FDR < 0.05 a
 
 To compare with methylation with expression, I will use `intersect()`, then plot methylation logFC against expression logFC, and calculate the association. I got that 62 genes are differentially methylated and differentially expressed. The resulting plot below shows a negative association between the two, and the resulting correlation is -0.4954892. This indicates that high methylation is associated with low gene expression which aligns with our in class discussion on methylation and gene expression.
 
+To determine the number of differentially expressed genes that have an epigenetic (DNA methylation) cause, I'll look at the genes I get from `intersect()` and find those that have opposite differential expression and methylation directions (according to lab 10.2). I found 60 such genes.
+
 ```{bash, eval=FALSE}
-# get the file (missing from cannon)
+# get the file 
 scp stat215u2107@login.rc.fas.harvard.edu:/n/stat115/2021/HW6/data/GBM_meth.txt part2/GBM_meth.txt
 ```
 
@@ -243,6 +246,14 @@ plot(common_gene$exprLFC, common_gene$methLFC,
 cor(common_gene$exprLFC, common_gene$methLFC)
 ```
 
+```{r}
+# determine the number of differentially expressed genes that have an epigenetic (DNA methylation) cause
+same_direction = function(a,b) {
+  ifelse(a == 0 | b == 0, as.logical("FALSE"), !xor(sign(a)+1,sign(b)+1)) 
+}
+
+sum(!same_direction(common_gene$exprLFC, common_gene$methLFC))
+```
 
 
 
@@ -257,9 +268,30 @@ cor(common_gene$exprLFC, common_gene$methLFC)
 
 Q4. With the survival data of the GBM tumors (GBM_clin.txt), make a Kaplan-Meier Curve to compare the two subtypes of GBM patients. Is there a significant difference in patient outcome between the two subtypes? 
 
-```{r}
-# your code here
+**Answer**: First I get the file from Cannon. Then I format the data (since the names are slightly different - uses dashes instead of periods). Finally I make the Kaplan-Meier Curve to compare the two subtypes of GBM patients. I notice that there a significant difference in patient outcome between the two subtypes because the gap between the two curve (type 0 has higher survival). The logrank test provides a p-value of 9e-04 which indicates the survival curves are significantly different across the two levels of covariates.
 
+```{bash, eval=FALSE}
+# get the file 
+scp stat215u2107@login.rc.fas.harvard.edu:/n/stat115/2021/HW6/data/GBM_clin.txt part2/GBM_clin.txt
+```
+
+```{r}
+# load data
+gbm_clin = read.csv("part2/GBM_clin.txt", sep = "\t")
+
+# format the data
+gbm_clin$X = str_replace_all(gbm_clin$X, "-", ".")
+rownames(gbm_clin) = gbm_clin$X
+
+# add in subtype information
+kmc_data = merge(gbm_clin, tumor_clusters, by = 0)
+```
+
+```{r}
+# Make the Kaplan-Meier Curve
+kmc_fit = survfit(Surv(days.to.death, vital.status) ~ type, data = kmc_data)
+ggsurvplot(kmc_fit, pval = TRUE, pval.method = TRUE) +
+    ggtitle("Survival for GBM Subtypes")
 ```
 
 
@@ -269,9 +301,46 @@ Q4. With the survival data of the GBM tumors (GBM_clin.txt), make a Kaplan-Meier
 
 Q5. For Graduate Students: Use the differential genes (say this is Y number of genes) between the two GBM subtypes as a gene signature to do a Cox regression of the tumor samples. Does it give significant predictive power of patient outcome?
 
-```{r}
-# your code here
+**Answer**: The cox regression models the hazard ratio against a set of covariates (in this case the differential genes). We will use the differentially expressed genes (as instructed from slack) as the predictors. This requires formatting our data table accordingly. Additionally, we need to perform lasso regression to identify the genes we should include since we have 385 differentially expressed genes compared to 60 samples. We perform the analysis provided in lab. I found the follow genes had non-zero coefficients in the LASSO procedure: PPCS, C1S, and TNC.
 
+Thus I'll perform Cox regression on the survival object against cluster type, PPCS, C1S, and TNC (results below). From the summary output, I see none of the predictors are statistically significant at $p < 0.05$. This is different from our results in Q4 where the type was statistically significant. However, both this model and the Kaplan-Meier Curve agree on the direction of effect for cluster type. We saw in the curve above, cluster 1 had lower survivor probability and in this cox model, we see a negative coefficient for type which agrees with the curve. 
+
+The cox model demonstrates significant predictive power of patient outcome, as the Likelihood ratio test, Wald test, and Score (logrank) test all attain significant p-values.
+
+```{r}
+# make the dataframe
+cox_data = data.frame(row.names = kmc_data$X,
+                      "time" = kmc_data$days.to.death,
+                      "death" = kmc_data$vital.status,
+                      "type" = kmc_data$type)
+
+# get the gene signatures
+covariates = data.frame(t(gbm_expr_top2k[rownames(dep_expr), c(1:60)]))
+
+# format data frame
+cox_data = merge(cox_data, covariates, by = 0)
+cox_data_nona = na.omit(cox_data)
+```
+
+
+```{r}
+# lasso analysis
+x = as.matrix(cox_data_nona[,-c(1:4)]) 
+survobj = Surv(cox_data_nona$time, cox_data_nona$death)
+cvfit = cv.glmnet(x, survobj, family = "cox", alpha = 1) 
+cvfit
+```
+
+
+```{r}
+# get non-zero coefficients
+rownames(coef(cvfit, s = 'lambda.min'))[coef(cvfit, s = 'lambda.min')[,1]!= 0]
+```
+
+```{r}
+# cox regression
+coxreg = coxph(Surv(time, death) ~ type + PPCS + C1S + TNC, data = cox_data)
+summary(coxreg)
 ```
 
 
@@ -280,13 +349,139 @@ Q5. For Graduate Students: Use the differential genes (say this is Y number of g
 
 
 
-Q6. For Graduate Students: Many studies use gene signatures to predict prognosis of patients. Take a look at this paper: http://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1002240. It turns out that most published gene signatures are not significantly more associated with outcome than random predictors. Write a script to randomly sample Y genes in this expression data as a gene signature and do Cox regression on the sampled signature to predict patient outcome. Automate the script and random sample followed by Cox regression 100 times. How does your signature in Q5 compared to random
-signatures in predicting outcome? 
+
+
+
+
+
+
+
+Q6. For Graduate Students: Many studies use gene signatures to predict prognosis of patients. Take a look at this paper: http://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1002240. It turns out that most published gene signatures are not significantly more associated with outcome than random predictors. Write a script to randomly sample Y genes in this expression data as a gene signature and do Cox regression on the sampled signature to predict patient outcome. Automate the script and random sample followed by Cox regression 100 times. How does your signature in Q5 compared to random signatures in predicting outcome? 
+
+**Answer**: The script to randomly sample genes in this expression data as a gene signature and do Cox regression on the sampled signature to predict patient outcome is provided below. In Q4, we found from our LASSO analysis that 3 genes had non-zero coefficients. This will be the number of genes we randomly sample. Moreover, we'll sample from the entire set of genes as opposed to restricting ourselves to the top 2000 variable genes. The criterion to evaluate model performance will be AIC. Lower AIC indicate a better model!
 
 ```{r}
-# your code here
-
+# baseline AIC performance
+extractAIC(coxreg)
 ```
+
+```{r}
+set.seed(215) # get consistent results
+k = 3 # number of genes to sample from Q4
+iter = 100 # number of iterations
+
+# data process of samples and genes 
+gbm_expr_samples = gbm_expr
+rownames(gbm_expr_samples) = gbm_expr_samples$X
+gbm_expr_samples = data.frame(t(gbm_expr_samples[, -1]))[c(1:60), ]
+
+# keep track of our results
+sims = matrix(, nrow = iter, ncol = k + 1)
+
+for (i in 1:iter) {
+  # make our dataframe
+  cox_data_iter = data.frame(row.names = kmc_data$X,
+                      "time" = kmc_data$days.to.death,
+                      "death" = kmc_data$vital.status,
+                      "type" = kmc_data$type)
+  
+  # get random gene
+  genes_iter = sample(colnames(gbm_expr_samples), 3)
+  
+  # update cox data 
+  cox_data_iter = merge(cox_data_iter, 
+                        gbm_expr_samples[,genes_iter],
+                        by = 0)[, -1]
+  
+  # compute model
+  coxreg_iter = coxph(Surv(time, death) ~ ., data = cox_data_iter)
+  
+  # store results
+  sims[i, 1:k] = genes_iter
+  sims[i, k+1] = extractAIC(coxreg_iter)[2]
+}
+```
+
+
+```{r}
+# Visualization and Analysis of the results
+sims = data.frame(sims)
+colnames(sims) = c("Gene1", "Gene2", "Gene3", "AIC")
+sims$AIC = as.numeric(sims$AIC)
+
+# histogram
+hist(sims$AIC, xlab = "AIC",
+     main = "Cox Models with Random Genes")
+abline(v = extractAIC(coxreg)[2], col = "red", lwd = 3, lty = 2)
+
+# print genes with best AICs from the random process
+head(sims[order(sims$AIC),], 5)
+```
+
+The baseline AIC from the cox model in Q4 was 227.5671. I performed the process 100 times, storing the genes that were used and the AIC. I made a histogram of from the resulting AICs - the red line is our base AIC from Q4. We see the cox model with differentially expressed genes chosen by LASSO performed much better using the AIC as criteria. Looking at the best cox models from the simulations, our original cox model from Q4 beat. The best cox model from random genes was with genes RAE1, CD5L, and ALOX15B acheiving an AIC of 227.6921 (being roughly .13 greater).
+
+My results are the opposite of the paper's finding that random gene selection works better. Thus it seems like there are some genes that clearly are more relevant for the cox model. Another reason for my results are perhaps that I randomly sampled from all genes (so 12042 genes) instead of the subset of top 2000 variable genes. Let's rerun the simulation and see the results when I sample from the top 2000 genes.
+
+```{r}
+# Same analysis but with top 2000 variable genes
+set.seed(215) # get consistent results
+k = 3 # number of genes to sample from Q4
+iter = 100 # number of iterations
+
+# data process of samples and genes 
+gbm_expr_samples = data.frame(t(gbm_expr_top2k))[c(1:60), ]
+
+# keep track of our results
+sims = matrix(, nrow = iter, ncol = k + 1)
+
+for (i in 1:iter) {
+  # make our dataframe
+  cox_data_iter = data.frame(row.names = kmc_data$X,
+                      "time" = kmc_data$days.to.death,
+                      "death" = kmc_data$vital.status,
+                      "type" = kmc_data$type)
+  
+  # get random gene
+  genes_iter = sample(colnames(gbm_expr_samples), 3)
+  
+  # update cox data 
+  cox_data_iter = merge(cox_data_iter, 
+                        gbm_expr_samples[,genes_iter],
+                        by = 0)[, -1]
+  
+  # compute model
+  coxreg_iter = coxph(Surv(time, death) ~ ., data = cox_data_iter)
+  
+  # store results
+  sims[i, 1:k] = genes_iter
+  sims[i, k+1] = extractAIC(coxreg_iter)[2]
+}
+```
+
+
+```{r}
+# Visualization and Analysis of the results
+sims = data.frame(sims)
+colnames(sims) = c("Gene1", "Gene2", "Gene3", "AIC")
+sims$AIC = as.numeric(sims$AIC)
+
+# histogram
+hist(sims$AIC, xlab = "AIC",
+     main = "Cox Models with Random Genes",
+     xlim=c(225,240))
+abline(v = extractAIC(coxreg)[2], col = "red", lwd = 3, lty = 2)
+
+# print genes with best AICs from the random process
+head(sims[order(sims$AIC),], 5)
+```
+
+
+It seems even with limiting our sample to the top 2000 variable genes, we don't find a random model that does better - in fact in this simulation run, none of the models generated with random signatures got as close compared to when we consider all possible genes. Thus we can conclude that in this particular case, using the LASSO with differentially expressed genes was beneficial as we weren't able to find any other cox model that performed better.
+
+
+
+
+
 
 
 ## Part III – Tumor mutation analyses and precision medicine
