@@ -18,6 +18,9 @@ library(FirebrowseR)
 library(glmnet)
 library(dplyr)
 library(plyr)
+library(factoextra)
+library(matrixStats)
+library(LaplacesDemon)
 ```
 
 Data for this HW is stored at /n/stat115/2021/HW6/data
@@ -41,10 +44,10 @@ of the following requirements?
 
 **Answer**: One the TCGA GDC website, I found 42 cases met all the requirements. Below are the screenshots of the filters I applied.
 
-![Site Specific Filters](Q1/filter1.png)
+![Site Specific Filters](part1/filter1.png)
 
 
-![Demographic Specific Filters](Q1/filter2.png)
+![Demographic Specific Filters](part1/filter2.png)
 
 Q2. TCGA GDC (https://portal.gdc.cancer.gov/) and Broad Firehose (http://firebrowse.org/) both provide processed TCGA data for downloading and downstream analysis. Download clinical data of GBM. What’s the average diagnosed age of all GBM patients?
 
@@ -90,28 +93,128 @@ mean(gbm_pats$age_at_initial_pathologic_diagnosis)
 
 ## Part II – Tumor Subtypes
 
-Q1. GBM is one of the earliest cancer types to be processed by TCGA, and the expression profiling was initially done with Affymetrix microarray. 
-Also, with brain cancer, it is hard to get sufficient number of normal samples. 
+Q1. GBM is one of the earliest cancer types to be processed by TCGA, and the expression profiling was initially done with Affymetrix microarray. Also, with brain cancer, it is hard to get sufficient number of normal samples. 
 We provide the pre-processed expression matrix in (GBM_expr.txt) where samples are columns and genes are rows. Do a K-means (k=3) clustering from all the genes and the most variable 2000 genes. Do tumor and normal samples separate in different clusters? Do the tumors samples consistently separate into 2 clusters, regardless of whether you use all the genes or most variable genes? 
 
-```{r}
-# your code here
+**Answer**: I couldn't find the GBM_expr.txt file on cannon so I instead pulled the file from the course's github from the 2020 HW repo. I posted a question on Slack about this however I received no response, so I'll do the analysis with this data. Note the code would be the same if we provided another file.
 
+The file provides 60 tumor samples and 10 normal samples. The data is already log2-transformed. Samples that start with `Normal` are normal samples while those that start with `TCGA` will be the tumor samples. I'll do K-means (`k = 3`) with all genes and top 2000 variable genes with the recommended parameters of `nstart = 10` and `iter.max = 100`
+
+```{bash, eval=FALSE}
+# get the file (missing from cannon)
+scp stat215u2107@login.rc.fas.harvard.edu:/n/stat115/2021/HW6/data/GBM_expr.txt part2/GBM_expr.txt
 ```
 
-Q2. LIMMA is a BioConductor package that does differential expression between microarrays, RNA-seq, and can remove batch effects (especially if you have experimental design with cmplex batches). Use LIMMA to see how many genes are differentially expressed between the two GBM subtypes (with FDR < 0.05 and logFC > 1.5)? 
-
 ```{r}
 # your code here
+gbm_expr = read.csv("part2/GBM_expr.txt", sep = "\t")
+```
 
+```{r}
+# K-means for all genes
+set.seed(215)
+gbm_expr_all = t(gbm_expr[, -1])
+k3 = kmeans(gbm_expr_all, centers = 3, nstart = 10, iter.max = 100)
+fviz_cluster(k3, data = gbm_expr_all, geom="point")
+table(k3$cluster)
+```
+
+The above K-means separates the normal and tumor samples based on **all genes**. The normal samples are the green cluster (cluster 2) with 10 samples. We also see two separate clusters (red cluster 1 and blue cluster 3) for the tumor samples each with 30 samples (however there is some small overlap).
+
+```{r}
+# find the top 2000 variable genes
+gbm_expr_top2k = gbm_expr[, -1] # make copy with numbers
+gbm_expr_top2k$var = rowVars(data.matrix(gbm_expr_top2k)) # find variances
+gbm_expr_top2k = gbm_expr_top2k[order(-gbm_expr_top2k$var), ] # sort genes
+gbm_expr_top2k = head(gbm_expr_top2k, 2000) # get top 2000 variable genes
+gbm_expr_top2k = gbm_expr_top2k[, !names(gbm_expr_top2k) %in% c("var")] # drop the variance column
+```
+
+```{r}
+# K-means for top 2000 variable genes
+set.seed(215)
+gbm_expr_top2k_kmeans = t(gbm_expr_top2k)
+k3 = kmeans(gbm_expr_top2k_kmeans, centers = 3, nstart = 10, iter.max = 100)
+fviz_cluster(k3, data = gbm_expr_top2k_kmeans, geom="point")
+table(k3$cluster)
+```
+
+The above K-means separates the normal and tumor samples based on **top 2000 variable genes**. The normal samples are the green cluster (cluster 2) with 10 samples. We also see two separate clusters (red cluster 1 and blue cluster 3) for the tumor samples each with 30 samples. 
+
+Therefore, using top 2000 variable genes and all genes results in nice cluster separation - there's clear division among the normal, and two types of tumor samples. However the K-means graph with top 2000 variable genes looks better than the K-means graph with all genes as there are no overlaps in the clusters and the PCs explain more of the variance. Hence, we'll stick with using top 2000 variable gene for future analysis.
+
+
+
+
+
+
+Q2. LIMMA is a BioConductor package that does differential expression between microarrays, RNA-seq, and can remove batch effects (especially if you have experimental design with complex batches). Use LIMMA to see how many genes are differentially expressed between the two GBM subtypes (with FDR < 0.05 and logFC > 1.5)? 
+
+**Answer**: We are interested in the two GBM subtypes - I'll use the two clusters corresponding to the tumor samples only from Q1 using only the 2000 top variable genes - those are clusters 1 and 3. We will need make a design matrix. After that, we did LIMMA analysis. Using `ebayes` and `topTable` (which is specified with the criteria FDR < 0.05 and logFC > 1.5), I got 1284 genes are differentially expressed between the two GBM subtypes.
+
+```{r}
+# remaking the top 2K variable genes with proper row names
+gbm_expr_top2k = gbm_expr 
+rownames(gbm_expr_top2k) = gbm_expr$X # set rownames as genes
+gbm_expr_top2k = gbm_expr_top2k[, -1] # drop gene name row
+gbm_expr_top2k$var = rowVars(data.matrix(gbm_expr_top2k)) # find variances
+gbm_expr_top2k = gbm_expr_top2k[order(-gbm_expr_top2k$var), ] # sort genes
+gbm_expr_top2k = head(gbm_expr_top2k, 2000) # get top 2000 variable genes
+gbm_expr_top2k = gbm_expr_top2k[, !names(gbm_expr_top2k) %in% c("var")] # drop the variance column
+```
+
+```{r}
+# make the design matrix
+tumor_clusters = data.frame(k3$cluster[c(1:60)]) # get the tumor clusters
+tumor_clusters$type = 1*(tumor_clusters$k3.cluster.c.1.60.. == 1) # label the types
+design_matrix = model.matrix(~ type, tumor_clusters) # get design matrix
+
+# LIMMA analysis
+lmfit_expr = lmFit(gbm_expr_top2k[, c(1:60)], design_matrix)
+lmfit_expr = eBayes(lmfit_expr, trend = TRUE)
+dep_expr = topTable(lmfit_expr, coef = 2, p.value = 0.05, lfc = log(1.5), number = 2000)
+head(dep_expr, 10)
+nrow(dep_expr)
 ```
 
 Q3. For Graduate Students: From the DNA methylation profiles (GBM_meth.txt), how many genes are significantly differentially methylated between the two subtypes? Are DNA methylation associated with higher or lower expression of these genes? How many differentially expressed genes have an epigenetic (DNA methylation) cause? 
 
-```{r}
-# your code here
+**Answer**: First we get the DNA methylation profiles from Cannon. Not all samples have methylation profiles, so we need to redesign the design matrix by focusing on the samples we have in DNA methylation profiles. A quick inspection shows us that the samples in DNA methylation profiles are all tumor samples the correspond to the same label from the previous questions. I perform this matching. We also need to logit transform the values since the methylation values is in range 0 to 1 before running limma. I'll also filter the DNA methylation profiles to the top 2000 variable genes similar to the expression data.
 
+Using `ebayes` and `topTable` (which is specified with the criteria FDR < 0.05 and logFC > 1.5), I got 1216 genes are differentially methylated between the two GBM subtypes. To compare with methylation with expression, I will use `intersect()`.
+
+```{bash, eval=FALSE}
+# get the file (missing from cannon)
+scp stat215u2107@login.rc.fas.harvard.edu:/n/stat115/2021/HW6/data/GBM_meth.txt part2/GBM_meth.txt
 ```
+
+```{r}
+# load in the data
+gbm_meth = read.csv("part2/GBM_meth.txt", sep = "\t")
+rownames(gbm_meth) = gbm_meth$X # set rownames as genes
+gbm_meth = gbm_meth[, -1] # drop gene name row
+
+gbm_meth$var = rowVars(data.matrix(gbm_meth)) # find variances
+gbm_meth = gbm_meth[order(-gbm_meth$var), ] # sort genes
+gbm_meth_top2k = head(gbm_meth, 2000) # get top 2000 variable genes
+gbm_meth_top2k = gbm_meth_top2k[, !names(gbm_meth_top2k) %in% c("var")] # drop the variance column
+
+gbm_meth_top2k = log(gbm_meth_top2k/(1 - gbm_meth_top2k)) # performing logit
+```
+
+```{r}
+# subset the design_matrix
+meth_design_matrix = subset(design_matrix, rownames(design_matrix) %in% colnames(gbm_meth_top2k))
+
+# LIMMA analysis
+lmfit_meth = lmFit(gbm_meth_top2k, meth_design_matrix)
+lmfit_meth = eBayes(lmfit_meth, trend = TRUE)
+dep_meth = topTable(lmfit_meth, coef = 2, p.value = 0.05, lfc = log(1.5), number = 2000)
+head(dep_meth, 10)
+nrow(dep_meth)
+```
+
+
 
 Q4. With the survival data of the GBM tumors (GBM_clin.txt), make a Kaplan-Meier Curve to compare the two subtypes of GBM patients. Is there a significant difference in patient outcome between the two subtypes? 
 
@@ -120,12 +223,23 @@ Q4. With the survival data of the GBM tumors (GBM_clin.txt), make a Kaplan-Meier
 
 ```
 
+
+
+
+
+
 Q5. For Graduate Students: Use the differential genes (say this is Y number of genes) between the two GBM subtypes as a gene signature to do a Cox regression of the tumor samples. Does it give significant predictive power of patient outcome?
 
 ```{r}
 # your code here
 
 ```
+
+
+
+
+
+
 
 Q6. For Graduate Students: Many studies use gene signatures to predict prognosis of patients. Take a look at this paper: http://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1002240. It turns out that most published gene signatures are not significantly more associated with outcome than random predictors. Write a script to randomly sample Y genes in this expression data as a gene signature and do Cox regression on the sampled signature to predict patient outcome. Automate the script and random sample followed by Cox regression 100 times. How does your signature in Q5 compared to random
 signatures in predicting outcome? 
