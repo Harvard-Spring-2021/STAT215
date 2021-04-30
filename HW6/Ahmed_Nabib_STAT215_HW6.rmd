@@ -637,21 +637,13 @@ Q5. From cBioPortal, select Glioblastoma (TCGA provisional, which has the larges
 Q6. You are working with an oncologist collaborator to decide the treatment option for a GBM patient. From exome-seq of the tumor, you identified the top mutation in Q2. To find out whether there are drugs that can target this mutation to treat the cancer, go to https://www.clinicaltrials.gov  to find clinical trials that target the gene in Q2. How many trials are related to glioblastoma? How many of these are actively recruiting patients which this patient could potentially join? 
 Hint: Search by the disease name and gene name. 
 
-**Answer**: The disease is Glioblastoma and the gene is IDH1. That is what I searched for on the Clincal Trials website. The tool provide total number of matches for my searches as well as the ability to filter based on recruiting. Hence I could just use the portal to find the numbers.
+**Answer**: The disease is Glioblastoma and the gene is IDH1. That is what I searched for on the Clincal Trials website. The tool provide total number of matches for my searches as well as the ability to filter based on recruiting and type of study (clinical). Hence I could just use the portal to find the numbers.
 
-For the gene IDH1, I found 8 trials with 3 actively recruiting patients which this patient could potentially join.
+I found 16 total trials with 8 actively recruiting patients which this patient could potentially join.
 
-![Total Trials IDH1](part3/q6.1.png)
+![Total Trials](part3/q6.1.png)
 
-![Actively Recruiting IDH1](part3/q6.2.png)
-
-
-For the gene Glioblastoma, I found 1629 trials with 321 actively recruiting patients which this patient could potentially join.
-
-![Total Trials Glioblastoma](part3/q6.3.png)
-
-![Actively Recruiting Glioblastoma](part3/q6.4.png)
-
+![Actively Recruiting](part3/q6.2.png)
 
 
 
@@ -678,32 +670,16 @@ Q1. Use MAGeCK to do a basic QC of the CRISPR screen data (e.g. read mapping, ri
 Directory: /n/stat115/2021/HW6/data/crispr_data
 
 ```{bash, eval= FALSE}
-# making my batch file (based on lab specifications)
+# making my batch file (based on lab specifications): this is for downstream analysis
 cat ->qc.sh <<EOF
 #!/bin/bash
-
-:: Number of cores
 #SBATCH -n 1
-
-:: Ensure that all cores are on one machine
 #SBATCH -N 1
-
-:: Runtime in D-HH:MM
 #SBATCH -t 0-06:00 
-
-:: Partition to submit to
 #SBATCH -p serial_requeue 
-
-:: Memory pool for all cores (see also --mem-per-cpu)
 #SBATCH --mem=1000 
-
-:: File to which STDOUT will be written
 #SBATCH -o mageck.out 
-
-:: File to which STDERR will be written
 #SBATCH -e mageck.err 
-
-:: Email notifications
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user="nahmed@college.harvard.edu"
 
@@ -718,40 +694,212 @@ EOF
 
 sbatch qc.sh
 
-# job id: 26234441 (in HW5 directory)
-
 # get output summary file
 mageck test -k OUT.count.txt -t Day23 -c Day0 -n OUT
+
+# bring file to local machine
+scp stat215u2107@login.rc.fas.harvard.edu:OUT.countsummary.txt part4/countsummary.txt
+scp stat215u2107@login.rc.fas.harvard.edu:OUT.gene_summary.txt part4/gene_summary.txt
+
+
+# making my batch file (based on lab specifications): this is for replicate analysis
+cat ->replicates.sh <<EOF
+#!/bin/bash
+#SBATCH -n 1
+#SBATCH -N 1
+#SBATCH -t 0-06:00 
+#SBATCH -p serial_requeue 
+#SBATCH --mem=1000 
+#SBATCH -o mageck.out 
+#SBATCH -e mageck.err 
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user="nahmed@college.harvard.edu"
+
+module load Anaconda/5.0.1-fasrc01
+
+source activate /n/stat115/2021/HW6_env2
+
+mageck count -l /n/stat115/2021/HW6/data/crispr_data/library.csv -n OUT --sample-label Day0_Rep1,Day0_Rep2,Day23_Rep1,Day23_Rep2 \
+--fastq /n/stat115/2021/HW6/data/crispr_data/GSC_0131_Day0_Rep1.fastq.gz /n/stat115/2021/HW6/data/crispr_data/GSC_0131_Day0_Rep2.fastq.gz /n/stat115/2021/HW6/data/crispr_data/GSC_0131_Day23_Rep1.fastq.gz /n/stat115/2021/HW6/data/crispr_data/GSC_0131_Day23_Rep2.fastq.gz
+
+EOF
+
+sbatch replicates.sh
+
+scp stat215u2107@login.rc.fas.harvard.edu:OUT.count_normalized.txt part4/count_normalized.txt
 ```
 
 
 ```{r}
-# your code here
-
+#  QC check
+countsummary = read.csv("part4/countsummary.txt", sep = "\t")
+countsummary
 ```
+
+
+**Answer**: Made a bash script to complete the quality control. From lab, good quality usually have the follow metrics: percentage of mapped reads is above 0.6, zero count is less than 0.1, and gini index is less than 0.1.
+
+From the quality control report from mageck, I found that the percentage of mapped reads is above 0.6 for all fastq files, the zero counts are more than 1000 magnitudes smaller so it less than 0.1, and the gini indices are all smaller than 0.1. Thus these fastq files have good quality based on these metrics/guidance.
+
+Now I'll inspect the ribosomal genes from the gene_summary.txt files (I'll use grep looking for genes that start with RP). Since ribosomal genes are vital for survival, they should be ranked high in the gene summary file.
+
+```{r}
+# ribosomal gene check
+gene_summary = read.csv("part4/gene_summary.txt", sep = "\t")
+RP_genes = subset(gene_summary, grepl("^RP", gene_summary$id) == TRUE)
+hist(RP_genes$neg.rank, xlab = "ranks",
+     main = "Ranks of Ribosomal Genes")
+```
+
+The gene summary file has 16,647 different genes. The histogram for the ranks for ribosomal genes are left skewed, which means that more of these genes have high rank, which is what we what we should expect. Thus the fastq files also pass quality in terms of ribosomal genes.
+
+Lastly, we'll look at the replicate consistency by using a heatmap on `count_normalized.txt`. We should expected the two files for Day 0 are highly correlated with each other. We should also expected the two files for Day 23 are highly correlated with each other. We'll need to re-run mageck with all four files separately to perform this analysis. Below are the results.
+
+```{r}
+# replicate consistency check
+count_normalized = read.csv("part4/count_normalized.txt", sep = "\t")
+# plot heatmap
+# heatmap(count_normalized[, c[2:6]])
+```
+
+From the heatmap, I see that the Day 0 fastq files are highly correlated with each other. Similarly for the Day 23 fastq files
+
+
 
 Q2. Analyze CRISPR screen data with MAGeCK to identify positive and negative selection genes. How many genes are selected as positive or negative selection genes, respectively, and what are their respective enriched pathways? 
 
-```{r}
-# your code here
+**Answer**: We can read in `gene_summary.txt` file using `ReadRRA()` command. This gives use FDR scores which we can filter on - we want FDR < 0.05 as those are significant. Then we can use the score to find the positive and negative genes. I found 8 positive selection genes (at FDR < 0.05) and 368 negative selection genes (at FDR < 0.05).
 
+```{r}
+# get score and FDR
+mageck_genes = ReadRRA("part4/gene_summary.txt")
+
+# filter for significant gene
+mageck_genes_sig = mageck_genes[mageck_genes$FDR < 0.05, ]
+
+# get positive and negative genes
+mageck_genes_pos = mageck_genes_sig[mageck_genes_sig$Score > 0, ]
+mageck_genes_neg = mageck_genes_sig[mageck_genes_sig$Score < 0, ]
+
+# get the counts
+nrow(mageck_genes_pos)
+nrow(mageck_genes_neg)
+
+# store the genes in text file for DAVID
+write.csv(mageck_genes_pos$id, file = "part4/positive_genes.txt",
+          row.names = FALSE, quote = FALSE)
+write.csv(mageck_genes_neg$id, file = "part4/negative_genes.txt",
+          row.names = FALSE, quote = FALSE)
 ```
+
+Now I'll run DAVID on these genes with identifier of Official_Gene_Symbol (screen shots provided below).
+
+For positive genes:
+
+![Positive Gene](part4/q2.1.png)
+
+
+For negative genes:
+
+![Negative Gene](part4/q2.2.png)
+
+I see that for diseases, both negative and positive selection genes have connection with OMIM_DISEASE (which is neurological issues with vanishing white matter). They also seem to share similar gene ontology. However for negative selection gene, they are part of a functional category of COG_ONTOLOGY which positive selection genes aren't.
+
+
+
+
+
 
 Q3. For Graduate Students: Genes negatively selected in this CRISPR screen could be potential drug targets. However, if they are always negatively selected in many cells, targeting such genes might create too much toxicity to the normal cells. Go to depmap (DepMap.org) which has CRISPR / RNAi screens of over 500 human cell lines, Click “Tools”  Data Explorer. Pick the top 3 negatively selected genes to explore. Select Gene Dependency from CRISPR (Avana) on the X axis and Omics from Expression on the Y axis, to see the relationship between the expression level of the gene and dependency (CRISPR screen selection) of the gene across ~500 cell lines. Are the top 3 genes good drug targets? 
 
-```{r}
-# your code here
+**Answer**: Negative selection genes are vital for GBM cancer cell survival and can potentially be drug targets. However we also need to worry about whether they are negatively selected for normal cells (potential collateral damage). We can address this by looking at the relationship between expression and dependency across many cell lines. If we observe that expression is highly correlated with dependency, this means that the alteration of the gene expression will affect the survival of many cells, and we should not use this as a drug target. We want those with low correlation!
 
+Given the tool might not have the exact gene names, I will also use alias from other databases to help the tool out. I selected the top 3 negatively genes by first FDR and then score, thus getting the these genes: RPL, ASH2L, and LAS1L.
+
+```{r}
+# get top 3 negatively selected genes (by FDR, and then score)
+head(mageck_genes_neg[order(mageck_genes_neg$FDR, 
+                            mageck_genes_neg$Score), ], 5)
 ```
+
+The results for RPL are below. We achieve a pearson $r^2$ of 0.180 and spearman $r^2$ of 0.156. The correlation is moderate, thus we can say that there is some relationship between expression and dependency. Thus I would not recommended for drug targeting.
+
+![RPL Graph](part4/q3.1.png)
+
+The results for ASH2L are below. We achieve a pearson $r^2$ of 0.394 and spearman $r^2$ of 0.405. The correlation is much bigger than the correlation for RPL above. I would say that expression and dependency is again moderate for this gene, so I would not recommend this gene as a drug target.
+
+![ASH2L Graph](part4/q3.2.png)
+
+
+
+
+
+The results for LAS1L are below. We achieve a pearson $r^2$ of 0.216 and spearman $r^2$ of 0.210. The correlation is moderate, thus we can say that there is some relationship between expression and dependency. Thus I would not recommended for drug targeting.
+
+![LAS1L Graph](part4/q3.3.png)
+
+In summary, by looking at the top 3 negatively selected genes, VARS2, PSMA, and SNAPC2, we found that all had moderate amount of correlation according to the depmap tool - thus not making them great candidates for drug targeting.
+
+Initially, I did this problem wrong by sorting by score and not FDR. When I plot those genes ranked by score, I saw the correlations were super low (less than 0.1) - I felt genes with that type of correlation would be ideal for drug targeting. 
+
+
+
+
+
+
+
+
 
 Q4. For Graduate Students: Let’s filter out pan essential genes (PanEssential.txt) from the negatively selected genes in Q2. Take the remaining top 10 genes, and check whether those genes have drugs or are druggable from this website: http://www.oasis-genomics.org/. Go to Analysis -> Pan Cancer Report, enter the top 10 genes and check the table for druggability (more druggable for higher number on Dr). Which of these genes are druggable?
 
-Note: If the above website cannot be opened, try https://www.dgidb.org/. Go to Search Potential Druggability or Search Drug-Gene Interactions ann enter the top 10 genes.
+Note: If the above website cannot be opened, try https://www.dgidb.org/. Go to Search Potential Druggability or Search Drug-Gene Interactions and enter the top 10 genes.
+
+
+**Answer**: First I get the PanEssential file. Then I filter those genes from negatively selected genes. Then I rank based first on FDR and then score, and get the top 10.
+
+```{bash, eval=FALSE}
+# get the files 
+scp stat215u2107@login.rc.fas.harvard.edu:/n/stat115/2021/HW6/data/PanEssential.txt part4/PanEssential.txt
+```
 
 ```{r}
-# your code here
+# load data
+PanEssential = read.csv("part4/PanEssential.txt", sep = "\t")
 
+# filter genes
+filter_genes = mageck_genes_neg[!(mageck_genes_neg$id %in% PanEssential$GeneSymbol), ]
+
+# sort and order
+head(filter_genes[order(filter_genes$FDR, 
+                        filter_genes$Score), ], 10)
+
+# write to txt file
+write.csv(head(filter_genes[order(filter_genes$FDR, 
+                        filter_genes$Score), ], 10)$id, 
+          file = "part4/drug_gene.txt",
+          row.names = FALSE, quote = FALSE)
 ```
+
+The first website doesn't work, so I'm using the second one. I attach screen shots of my results. It seems the genes that got matched were ASH2L, TCOF1, PMVK, and NF2. These genes had more information about druggability, thuse I would say 4 genes are druggable. As for a druggable score, I couldn't find that option on the second website.
+
+
+
+![Drug Database Results](part4/q4.1.png)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 ## Part V. Cancer immunology and immunotherapy
@@ -760,11 +908,65 @@ Immune checkpoint inhibitors, which primarily activate CD8 T cells, have shown r
 
 Q1. TIMER (http://timer.cistrome.org/) estimated the infiltration level of different immune cells of TCGA tumors using different immune deconvolution methods. CD8A and CD8B are two gene markers on CD8 T cells. On the Diff Exp tab, compare the expression level of either CD8A or CD8B between GBM and SKCM (Metastatic Melanoma). Based on this, which cancer type have more CD8 T cells? 
 
+**Answer**: Screen shots provide below.
+
+![CD8A](part5/cd8a.jpeg)
+
+Looking at CD8A and comparing GBM vs SKCM, we see that SKCM has more expression of CD8A (as well as a greater range of possible expression values). Also the expression of CD8A for SKCM is statistical significant indicated by asterisk.
+
+
+![CD8B](part5/cd8b.jpeg)
+
+Similarly looking at CD8B and comparing GBM vs SKCM, we see that SKCM has more expression of CD8B (as well as a greater range of possible expression values). Also the expression of CD8B for SKCM is statistical significant indicated by asterisk.
+
+Thus we can conclude that Metastatic Melanoma has more CD8 T cells.
+
 Q2. On the Gene tab, select both GBM and SKCM (Metastatic Melanoma), include CD8 T cells as the cell infiltrate. Check the following genes, PDCD1(PD1), CD274(PDL1), CTLA4 which are the targets of immune checkpoint inhibitors, to see whether their expression level is associated with immune cell infiltration in the GBM and SKCM tumors. Their higher expression usually indicate that T cells are in a dysfunctional state, which immune checkpoint inhibitors aim to revive. 
+
+**Answer**: Screen shots provide below.
+
+![PDCD1](part5/PDCD1_table.jpeg)
+
+For PDCD1, we see the GBM row is lightly colored (indicating it has weak correlation with PDCD1) and several x-marks which means it doesn't get statistical significance for those categories. Whereas, SKCM is darkly colored red (indicating it has strong positive correlation with PDCD1) and no x-marks which means it is statistical significance for all those categories.
+
+
+![CD274](part5/CD274_table.jpeg)
+
+
+For CD274, we a similar trend as before. GBM has weak and slightly negative correlation, with main categories not being statistically significant, whereas SKCM is mostly colored red (indicating it has strong positive correlation with CD274) and achieving statistical significance for all categories.
+
+
+
+![CTLA4](part5/CTLA4_table.jpeg)
+
+For CTLA4, we a similar trend as before. GBM has positive correlation with CTLA4, but it is weaker than SKCM's correlation. Similarly, SKCM is statistically significant on more categories than GBM.
+
+
+In conclusion, we find that these genes expression level is associated with higher immune cell infiltration for SKCM tumors than for GBM (from the above graphs).
+
+
 
 Q3. On the Survival tab, select both GBM and SKCM, include CD8 T cell as the cell infiltrate, add tumor stage and patient age as the clinical variables to conduct survival analyses. Based on the Cox PH model, what factors are the most significantly associated with patient survival in each cancer type? Plot the Kaplan-Meier curve to evaluate how the immune cell infiltrate is associated with survival. Is CD8 T cell associated with patient survival in each cancer type? 
 
+**Answer**: Screen shot attached below.
+
+![Outcomes](part5/outcome_table.jpeg)
+
+We see high negative z-scores for SKCM compare to GBM. Now's look at the cox models below:
+
+![COX: GBM](part4/gbm_cox.png)
+
+![COX: SKCM](part4/skcm_cox.png)
+
+
+We see that age is significant for both GBM and SKCM. However for SKCM, stage also matters as we see that appear in the resulting Cox Model (particularly Stage 4 and Stage 3). Both models are significant given their summary statistics.
+
+
 Q4. For Graduate Students: Based on the above observations, can you hypothesize why immune checkpoint inhibitors don’t work well for some GBM patients? 
+
+**Answer**: The reason that immune checkpoint inhibitors don’t work well for some GBM patients is because 1) CD8A and CD8B isn't as present, as seen in Q1. Moreover, the expression from the genes replace for these inhibitors is not really associated with higher immune cell infiltration (as we saw in Q2 with the graphs). Lastly, I image that GBM has to do a lot with age and our body naturally become more weathered as we get older. For these reasons, we see that immune checkpoint inhibitors don’t work well for some GBM patients. 
+
+
 
 
 # Rules for submitting the homework:
