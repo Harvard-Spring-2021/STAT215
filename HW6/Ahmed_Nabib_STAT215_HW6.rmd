@@ -301,9 +301,9 @@ ggsurvplot(kmc_fit, pval = TRUE, pval.method = TRUE) +
 
 Q5. For Graduate Students: Use the differential genes (say this is Y number of genes) between the two GBM subtypes as a gene signature to do a Cox regression of the tumor samples. Does it give significant predictive power of patient outcome?
 
-**Answer**: The cox regression models the hazard ratio against a set of covariates (in this case the differential genes). We will use the differentially expressed genes (as instructed from slack) as the predictors. This requires formatting our data table accordingly. Additionally, we need to perform lasso regression to identify the genes we should include since we have 385 differentially expressed genes compared to 60 samples. We perform the analysis provided in lab. I found the follow genes had non-zero coefficients in the LASSO procedure: PPCS, C1S, and TNC.
+**Answer**: The cox regression models the hazard ratio against a set of covariates (in this case the differential genes). We will use the differentially expressed genes (as instructed from slack) as the predictors. This requires formatting our data table accordingly. Additionally, we need to perform lasso regression to identify the genes we should include since we have 385 differentially expressed genes compared to 60 samples. We perform the analysis provided in lab. I found the follow genes had non-zero coefficients in the LASSO procedure: FCGR2B, PPCS, C1S, IL8, and TNC.
 
-Thus I'll perform Cox regression on the survival object against cluster type, PPCS, C1S, and TNC (results below). From the summary output, I see none of the predictors are statistically significant at $p < 0.05$. This is different from our results in Q4 where the type was statistically significant. However, both this model and the Kaplan-Meier Curve agree on the direction of effect for cluster type. We saw in the curve above, cluster 1 had lower survivor probability and in this cox model, we see a negative coefficient for type which agrees with the curve. 
+Thus I'll perform Cox regression on the survival object against cluster type, and genes FCGR2B, PPCS, C1S, IL8, and TNC (results below). From the summary output, I see none of the predictors are statistically significant at $p < 0.05$. This is different from our results in Q4 where the type was statistically significant. However, both this model and the Kaplan-Meier Curve agree on the direction of effect for cluster type. We saw in the curve above, cluster 1 had lower survivor probability and in this cox model, we see a negative coefficient for type which agrees with the curve. 
 
 The cox model demonstrates significant predictive power of patient outcome, as the Likelihood ratio test, Wald test, and Score (logrank) test all attain significant p-values.
 
@@ -325,6 +325,7 @@ cox_data_nona = na.omit(cox_data)
 
 ```{r}
 # lasso analysis
+set.seed(115)
 x = as.matrix(cox_data_nona[,-c(1:4)]) 
 survobj = Surv(cox_data_nona$time, cox_data_nona$death)
 cvfit = cv.glmnet(x, survobj, family = "cox", alpha = 1) 
@@ -358,7 +359,7 @@ summary(coxreg)
 
 Q6. For Graduate Students: Many studies use gene signatures to predict prognosis of patients. Take a look at this paper: http://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1002240. It turns out that most published gene signatures are not significantly more associated with outcome than random predictors. Write a script to randomly sample Y genes in this expression data as a gene signature and do Cox regression on the sampled signature to predict patient outcome. Automate the script and random sample followed by Cox regression 100 times. How does your signature in Q5 compared to random signatures in predicting outcome? 
 
-**Answer**: The script to randomly sample genes in this expression data as a gene signature and do Cox regression on the sampled signature to predict patient outcome is provided below. In Q4, we found from our LASSO analysis that 3 genes had non-zero coefficients. This will be the number of genes we randomly sample. Moreover, we'll sample from the entire set of genes as opposed to restricting ourselves to the top 2000 variable genes. The criterion to evaluate model performance will be AIC. Lower AIC indicate a better model!
+**Answer**: The script to randomly sample genes in this expression data as a gene signature and do Cox regression on the sampled signature to predict patient outcome is provided below. In Q4, we found from our LASSO analysis that 5 genes had non-zero coefficients. This will be the number of genes we randomly sample. Moreover, we'll sample from the entire set of genes as opposed to restricting ourselves to the top 2000 variable genes. The criterion to evaluate model performance will be AIC. Lower AIC indicate a better model!
 
 ```{r}
 # baseline AIC performance
@@ -491,7 +492,7 @@ It seems even with limiting our sample to the top 2000 variable genes, we don't 
 
 Q1. The MAF files contain the mutations of each tumor compared to the normal DNA in the patient blood. Write a script to parse out the mutations present in each tumor sample and write out a table. The table should rank the genes by how many times mutation happens in the tumor samples provided. Submit the table with the top 20 genes. 
 
-**Answer**: First I downloaded from Cannon. Then I used `dplyr` to get a table with the top 20 genes (provided below). The top gene was TP53 with 16 protein changes.
+**Answer**: First I downloaded from Cannon. Then I used `dplyr` to get a table with the top 20 genes (provided below). The top gene was TP53 with 16 protein changes, followed by IDH1 with 12 protein changes.
 
 ```{bash, eval=FALSE}
 # get the files 
@@ -579,23 +580,43 @@ Stratifying based on the tumor type, we see that the IDH1 p.R132H gene protein m
 
 
 
-
+             
 
               
 Q3. CBioPortal has a comprehensive list of tumor profiling results for interactive visualization. Go to cBioPortal (http://www.cbioportal.org), and select either “Glioblastoma” under “CNS/Brian” (left) or select “TCGA PanCancer Atlas Studies” under “Quick Select” (middle). Input each gene in Q1 and click Submit. From the OncoPrint tab, you can see how often each gene is mutated in GBM or all TCGA cancer types. Based on this, which of the genes in Q1 is likely to be a cancer driver gene? 
 
-**Answer**: I provide a screen shot below. Based on cBioPortal, I find XX to be genes likely to be a cancer driver gene.
+**Answer**: I provide a screen shot below. The position of mutation determines whether a gene is likely to be a driver gene. Specifically, we are looking for genes that have many mutations or have mutations across a large section of their gene body. Based on cBioPortal, I find TP53, TTN, PIK3CA, and PTEN to be genes likely to be a cancer driver gene. These genes have both a large number of permutations (their percentage value were double digits) and their permutations are wide spread across their gene bodies. Interestingly, I saw genes with permutations that were wide spread (those on the both of the screen shot for example), but the permutations affected a relatively small percentage of their gene body, hence I didn't determine them as cancer drive cells.
     
 ```{r}
-# get list of HUGO symbols from
-                            
+# get list of HUGO symbols from Q1 analysis
+write.csv(maf_gene_changes$Hugo_Symbol[1:20], file = "part3/top20genes.txt",
+          row.names = FALSE, quote = FALSE)
 ```
+
+
+![cBioPortal Results](part3/q3.1.png)
+
+
+
+
+
+
+
+
+
+
+
 
 
 
 
 
 Q4. From the Mutation tab on the cBioPortal result page, is this mutation a gain or loss of function mutation on the gene you identified from Q2?
+
+**Answer**: The gene-protein mutation I identified from Q2 was IDH1 p.R132H protein mutation. Gain of function is when the mutation happens frequently at a specific position. Loss of function is when the mutation happens across many spots with low frequency. From this, IDH1 p.R132H is a gain of function because mutation occurs 480 times and all in similar spot (indicated by the dot with the long bar in the screen shot).
+
+
+![cBioPortal Mutation Tab for IDH1](part3/q4.1.png)
 
 
 
@@ -604,6 +625,11 @@ Q4. From the Mutation tab on the cBioPortal result page, is this mutation a gain
 
 Q5. From cBioPortal, select Glioblastoma (TCGA provisional, which has the largest number of samples) and enter the driver mutation gene in Q2. From the Survival tab, do GBM patients with this mutation have better outcome in terms of progression free survival and overall survival? 
 
+**Answer**: I couldn't find Glioblastoma (TCGA provisional) so instead I chose the Glioblastoma study with the largest number of sample (as per Jack's instruction on Slack). That was study: Glioblastoma Multiforme (TCGA, Firehose Legacy) with 604 samples. I query with IDH1 gene from Q2. The screenshot below has the survival curve. I see the logrank test p-value is significant at $p < 0.05$, thus the difference is significant. The blue curve is for unaltered whereas the red curve is for altered. Since we observe the red curve as higher than the blue (for the months 0-50), we can conclude GBM patients with this mutation have better outcome in terms of progression free survival and overall survival.
+
+![cBioPortal Mutation Tab for IDH1](part3/q5.1.png)
+
+
 
 
 
@@ -611,10 +637,32 @@ Q5. From cBioPortal, select Glioblastoma (TCGA provisional, which has the larges
 Q6. You are working with an oncologist collaborator to decide the treatment option for a GBM patient. From exome-seq of the tumor, you identified the top mutation in Q2. To find out whether there are drugs that can target this mutation to treat the cancer, go to https://www.clinicaltrials.gov  to find clinical trials that target the gene in Q2. How many trials are related to glioblastoma? How many of these are actively recruiting patients which this patient could potentially join? 
 Hint: Search by the disease name and gene name. 
 
-```{r}
-# your code here
+**Answer**: The disease is Glioblastoma and the gene is IDH1. That is what I searched for on the Clincal Trials website. The tool provide total number of matches for my searches as well as the ability to filter based on recruiting. Hence I could just use the portal to find the numbers.
 
-```
+For the gene IDH1, I found 8 trials with 3 actively recruiting patients which this patient could potentially join.
+
+![Total Trials IDH1](part3/q6.1.png)
+
+![Actively Recruiting IDH1](part3/q6.2.png)
+
+
+For the gene Glioblastoma, I found 1629 trials with 321 actively recruiting patients which this patient could potentially join.
+
+![Total Trials Glioblastoma](part3/q6.3.png)
+
+![Actively Recruiting Glioblastoma](part3/q6.4.png)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 ## Part IV- CRISPR screens
